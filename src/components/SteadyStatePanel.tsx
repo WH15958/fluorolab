@@ -257,7 +257,7 @@ export default function SteadyStatePanel({ datasets }: SteadyStatePanelProps) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url; a.download = `${fitTarget.name.replace(/\.[^.]+$/, '')}_fit.csv`;
-    document.body.appendChild(a); a.click(); document.body.removeChild);
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
     URL.revokeObjectURL(url);
   };
 
