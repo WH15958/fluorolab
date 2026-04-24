@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
-  Legend, ResponsiveContainer, ReferenceLine, BarChart, Bar,
+  Legend, ResponsiveContainer, ReferenceLine, ReferenceArea, BarChart, Bar,
 } from 'recharts';
 import {
   Zap, Play, RefreshCw, ChevronDown, ChevronUp,
@@ -187,6 +187,8 @@ export default function TransientPanel({ datasets, irfDatasets }: TransientPanel
         irfData: fitConfig.useIRF && selectedIRF ? selectedIRF.data : null,
         customExpression: fitConfig.customExpression,
         customParamNames: customParamNames,
+        fullTimeAxis: selectedDataset.rawData.map((p) => p.x),
+        fitRange: { start: fitConfig.fitRangeStart, end: fitConfig.fitRangeEnd },
       });
 
       setFitResult(result);
@@ -198,15 +200,20 @@ export default function TransientPanel({ datasets, irfDatasets }: TransientPanel
   }, [selectedDataset, fitConfig, selectedIRF, customParamNames]);
 
   // Chart data: merge raw + fitted + IRF with optional normalization
+  // Use fullFittedCurve (on full time axis) if available, otherwise fittedCurve
   const chartData = useMemo(() => {
     if (!selectedDataset) return [];
     const raw = selectedDataset.rawData;
     const maxY = fitConfig.normalize ? Math.max(...raw.map((p) => p.y)) : 1;
+    
+    // Use fullFittedCurve for display if available, otherwise fall back to fittedCurve
+    const displayCurve = fitResult?.fullFittedCurve ?? fitResult?.fittedCurve;
+    
     return raw.map((p, i) => {
       const yNorm = maxY > 0 ? p.y / maxY : p.y;
       const row: Record<string, number | null> = { x: p.x, raw: yNorm };
-      if (fitResult) {
-        const fy = fitConfig.normalize && maxY > 0 ? fitResult.fittedCurve[i]?.y / maxY : fitResult.fittedCurve[i]?.y;
+      if (fitResult && displayCurve) {
+        const fy = fitConfig.normalize && maxY > 0 ? displayCurve[i]?.y / maxY : displayCurve[i]?.y;
         row.fitted = fy ?? null;
       }
       if (fitConfig.useIRF && selectedIRF) {
@@ -656,6 +663,17 @@ export default function TransientPanel({ datasets, irfDatasets }: TransientPanel
                       const map: Record<string, string> = { raw: '原始数据', fitted: '拟合曲线', irf: 'IRF' };
                       return <span style={{ fontSize: 12, color: '#CBD5E1' }}>{map[value] || value}</span>;
                     }} />
+                    {/* Highlight fitting range */}
+                    {fitResult?.fitRange && (fitResult.fitRange.start !== null || fitResult.fitRange.end !== null) && (
+                      <ReferenceArea
+                        x1={fitResult.fitRange.start ?? undefined}
+                        x2={fitResult.fitRange.end ?? undefined}
+                        fill="rgba(167, 139, 250, 0.08)"
+                        stroke="rgba(167, 139, 250, 0.3)"
+                        strokeWidth={1}
+                        ifOverflow="extendDomain"
+                      />
+                    )}
                     <Line dataKey="raw" stroke="#38BDF8" dot={false} strokeWidth={1.5} name="raw" isAnimationActive={false} connectNulls={!fitConfig.logScale} />
                     {fitResult && (
                       <Line dataKey="fitted" stroke="#F59E0B" dot={false} strokeWidth={2.5} name="fitted" strokeDasharray="6 2" isAnimationActive={false} connectNulls />
@@ -694,8 +712,13 @@ export default function TransientPanel({ datasets, irfDatasets }: TransientPanel
                 <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 14, display: 'flex', alignItems: 'center', gap: 6 }}>
                   <CheckCircle2 size={15} color="#22C55E" /> 拟合参数结果
                   {fitResult.useIRF && (
-                    <span style={{ fontSize: 11, color: '#F59E0B', background: 'rgba(245, 158, 11, 0.1)', padding: '2px 8px', borderRadius: 20, marginLeft: 6 }}>
-                      已使用 IRF 卷积
+                    <span style={{ fontSize: 11, color: '#F59E0B', background: 'rgba(245, 158, 11, 0.1)', padding: '2px 8px', borderRadius: 20 }}>
+                      IRF 卷积
+                    </span>
+                  )}
+                  {fitResult.fitRange && (fitResult.fitRange.start !== null || fitResult.fitRange.end !== null) && (
+                    <span style={{ fontSize: 11, color: '#A78BFA', background: 'rgba(167, 139, 250, 0.1)', padding: '2px 8px', borderRadius: 20 }}>
+                      拟合范围: {fitResult.fitRange.start?.toFixed(2) ?? '-'} ~ {fitResult.fitRange.end?.toFixed(2) ?? '-'} ns
                     </span>
                   )}
                 </div>

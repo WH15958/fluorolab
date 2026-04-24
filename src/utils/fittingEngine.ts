@@ -250,13 +250,15 @@ export interface FitOptions {
   irfData?: DataPoint[] | null;
   customExpression?: string;
   customParamNames?: string[];
+  fullTimeAxis?: number[];  // If provided, compute fullFittedCurve on this time axis for display
+  fitRange?: { start: number | null; end: number | null }; // Record the fitting range
 }
 
 export function fitTransientDecay(
   data: DataPoint[],
   options: FitOptions
 ): FitResult {
-  const { modelType, initialParams, bounds, irfData, customExpression, customParamNames } = options;
+  const { modelType, initialParams, bounds, irfData, customExpression, customParamNames, fullTimeAxis, fitRange } = options;
   
   // Build model function
   let modelFn: (t: number, params: number[]) => number;
@@ -276,46 +278,53 @@ export function fitTransientDecay(
   const timeAxis = data.map((p) => p.x);
   const useIRF = !!irfData && irfData.length > 0;
   
+  // Helper to compute model values (scaled to data peak)
+  function computeModelValues(targetTimeAxis: number[], targetData: DataPoint[], params: number[]): number[] {
+    let values: number[];
+    if (useIRF && irfData) {
+      values = convolveWithIRF(modelFn, params, targetTimeAxis, irfData);
+    } else {
+      values = targetTimeAxis.map((t) => modelFn(t, params));
+    }
+    // Scale to match target data peak
+    const modelMax = Math.max(...values);
+    const dataMax = Math.max(...targetData.map((p) => p.y));
+    const scale = modelMax > 0 ? dataMax / modelMax : 1;
+    return values.map((v) => v * scale);
+  }
+  
   // Cost function
   function cost(params: number[]): number {
-    let modelValues: number[];
-    
-    if (useIRF && irfData) {
-      modelValues = convolveWithIRF(modelFn, params, timeAxis, irfData);
-    } else {
-      modelValues = timeAxis.map((t) => modelFn(t, params));
-    }
-    
-    // Scale to match data peak
-    const modelMax = Math.max(...modelValues);
-    const dataMax = Math.max(...data.map((p) => p.y));
-    const scale = modelMax > 0 ? dataMax / modelMax : 1;
-    
+    const modelValues = computeModelValues(timeAxis, data, params);
     return data.reduce((sum, p, i) => {
       const weight = p.y > 0 ? 1 / (p.y + 1) : 1;
-      return sum + weight * (p.y - modelValues[i] * scale) ** 2;
+      return sum + weight * (p.y - modelValues[i]) ** 2;
     }, 0);
   }
   
   // Optimize
   const fittedParams = minimize(initialParams, cost, bounds, { maxIter: 500 });
   
-  // Compute fitted curve
-  let fittedValues: number[];
-  if (useIRF && irfData) {
-    fittedValues = convolveWithIRF(modelFn, fittedParams, timeAxis, irfData);
-  } else {
-    fittedValues = timeAxis.map((t) => modelFn(t, fittedParams));
-  }
-  
-  // Scale to data
-  const modelMax = Math.max(...fittedValues);
-  const dataMax = Math.max(...data.map((p) => p.y));
-  const scale = modelMax > 0 ? dataMax / modelMax : 1;
-  fittedValues = fittedValues.map((v) => v * scale);
-  
+  // Compute fitted curve on the data used for fitting
+  const fittedValues = computeModelValues(timeAxis, data, fittedParams);
   const fittedCurve = timeAxis.map((t, i) => ({ x: t, y: fittedValues[i] }));
   const residuals = data.map((p, i) => ({ x: p.x, y: p.y - fittedValues[i] }));
+  
+  // Optionally compute fitted curve on full time axis for display
+  let fullFittedCurve: DataPoint[] | undefined;
+  if (fullTimeAxis && fullTimeAxis.length > 0) {
+    // Use the scale computed from fitting data
+    const modelMax = Math.max(...fittedValues);
+    const dataMax = Math.max(...data.map((p) => p.y));
+    const scale = modelMax > 0 ? dataMax / modelMax : 1;
+    let fullValues: number[];
+    if (useIRF && irfData) {
+      fullValues = convolveWithIRF(modelFn, fittedParams, fullTimeAxis, irfData);
+    } else {
+      fullValues = fullTimeAxis.map((t) => modelFn(t, fittedParams));
+    }
+    fullFittedCurve = fullTimeAxis.map((t, i) => ({ x: t, y: fullValues[i] * scale }));
+  }
   
   const chiSquared = computeChiSquared(residuals.map((r) => r.y), data);
   const rSquared = computeRSquared(data, fittedValues);
@@ -333,11 +342,13 @@ export function fitTransientDecay(
     modelType,
     parameters,
     fittedCurve,
+    fullFittedCurve,
     residuals,
     chiSquared,
     rSquared,
     useIRF,
     customExpression,
+    fitRange,
   };
 }
 

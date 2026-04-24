@@ -41,12 +41,14 @@ export interface FitParameter {
 export interface FitResult {
   modelType: FitModelType;
   parameters: FitParameter[];
-  fittedCurve: DataPoint[];
+  fittedCurve: DataPoint[];     // Fitted curve on the data actually used for fitting
+  fullFittedCurve?: DataPoint[]; // Fitted curve on full time axis (for display)
   residuals: DataPoint[];
   chiSquared: number;
   rSquared: number;
   useIRF: boolean;
   customExpression?: string;
+  fitRange?: { start: number | null; end: number | null }; // The fitting range used
 }
 
 // ===== Steady State Analysis =====
