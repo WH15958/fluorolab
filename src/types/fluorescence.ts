@@ -59,5 +59,34 @@ export interface SteadyStateAnalysis {
   integratedIntensity: number;
 }
 
+// ===== Peak Fitting =====
+
+export type PeakShape = 'gaussian' | 'lorentzian' | 'voigt';
+
+export interface PeakParams {
+  id: string;
+  amplitude: number;
+  center: number;
+  fwhm: number;
+  shape: PeakShape;
+  mu: number; // Voigt mixing parameter (0=Gaussian, 1=Lorentzian)
+}
+
+export interface PeakFitResult {
+  peaks: PeakParams[];
+  baseline: number;
+  fittedCurve: DataPoint[];
+  residuals: DataPoint[];
+  rSquared: number;
+  reducedChiSq: number;
+  totalArea: number;
+}
+
+export interface DetectedPeak {
+  center: number;
+  amplitude: number;
+  fwhm: number;
+}
+
 // ===== UI State =====
 export type ActiveTab = 'upload' | 'steady-state' | 'transient';
