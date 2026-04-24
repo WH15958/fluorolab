@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+﻿import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   Legend, ResponsiveContainer, ReferenceLine, ReferenceArea, BarChart, Bar,
@@ -29,6 +29,7 @@ interface FitConfig {
   useIRF: boolean;
   irfId: string;
   logScale: boolean;
+  xLogScale: boolean;
   normalize: boolean;
   customExpression: string;
   customParams: string; // comma-separated names
@@ -41,15 +42,17 @@ interface FitConfig {
   // Fitting time range (ns)
   fitRangeStart: number | null;
   fitRangeEnd: number | null;
+  // Time offset t₀ for direct fitting
+  timeOffset: number | null;
 }
 
-const MODEL_OPTIONS: { value: FitModelType; label: string; formula: string; nparams: number }[] = [
-  { value: 'mono-exp', label: '单指数衰减', formula: 'A₁·exp(-t/τ₁) + C', nparams: 3 },
-  { value: 'bi-exp', label: '双指数衰减', formula: 'A₁·exp(-t/τ₁) + A₂·exp(-t/τ₂) + C', nparams: 5 },
-  { value: 'tri-exp', label: '三指数衰减', formula: 'A₁·exp(-t/τ₁) + A₂·exp(-t/τ₂) + A₃·exp(-t/τ₃) + C', nparams: 7 },
-  { value: 'stretched-exp', label: '拉伸指数', formula: 'A·exp(-(t/τ)^β) + C', nparams: 4 },
-  { value: 'power-law', label: '幂律函数', formula: 'A·t^(-β) + C', nparams: 3 },
-  { value: 'custom', label: '自定义函数', formula: '用户自定义', nparams: 0 },
+const MODEL_OPTIONS: { value: FitModelType; label: string; formula: string; formulaWithOffset: string; nparams: number }[] = [
+  { value: 'mono-exp', label: '单指数衰减', formula: 'A₁·exp(-t/τ₁) + C', formulaWithOffset: 'A₁·exp(-(t-t₀)/τ₁) + C', nparams: 3 },
+  { value: 'bi-exp', label: '双指数衰减', formula: 'A₁·exp(-t/τ₁) + A₂·exp(-t/τ₂) + C', formulaWithOffset: 'A₁·exp(-(t-t₀)/τ₁) + A₂·exp(-(t-t₀)/τ₂) + C', nparams: 5 },
+  { value: 'tri-exp', label: '三指数衰减', formula: 'A₁·exp(-t/τ₁) + A₂·exp(-t/τ₂) + A₃·exp(-t/τ₃) + C', formulaWithOffset: 'A₁·exp(-(t-t₀)/τ₁) + A₂·exp(-(t-t₀)/τ₂) + A₃·exp(-(t-t₀)/τ₃) + C', nparams: 7 },
+  { value: 'stretched-exp', label: '拉伸指数', formula: 'A·exp(-(t/τ)^β) + C', formulaWithOffset: 'A·exp(-((t-t₀)/τ)^β) + C', nparams: 4 },
+  { value: 'power-law', label: '幂律函数', formula: 'A·t^(-β) + C', formulaWithOffset: 'A·(t-t₀)^(-β) + C', nparams: 3 },
+  { value: 'custom', label: '自定义函数', formula: '用户自定义', formulaWithOffset: '用户自定义', nparams: 0 },
 ];
 
 function Card({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
@@ -112,7 +115,7 @@ export default function TransientPanel({ datasets, irfDatasets }: TransientPanel
     const def = getDefaultParams('mono-exp');
     return {
       modelType: 'mono-exp', useIRF: false, irfId: '',
-      logScale: true, normalize: false,
+      logScale: true, xLogScale: false, normalize: false,
       customExpression: 'A * Math.exp(-t / tau) + C',
       customParams: 'A,tau,C',
       paramInitials: def.initial,
@@ -121,6 +124,7 @@ export default function TransientPanel({ datasets, irfDatasets }: TransientPanel
       axisRange: { xMin: null, xMax: null, yMin: null, yMax: null },
       fitRangeStart: null,
       fitRangeEnd: null,
+      timeOffset: null,
     };
   });
   const [fitResult, setFitResult] = useState<FitResult | null>(null);
@@ -180,59 +184,25 @@ export default function TransientPanel({ datasets, irfDatasets }: TransientPanel
         });
       }
 
-      // Auto-compute smart initial params based on data
-      const dataMax = Math.max(...fitData.map((p) => p.y));
-      const dataMin = Math.min(...fitData.map((p) => p.y));
-      const dataRange = dataMax - dataMin;
-      const firstY = fitData[0]?.y ?? dataMax;
-      const lastY = fitData[fitData.length - 1]?.y ?? dataMin;
-      const decayRatio = firstY > 0 && lastY >= 0 ? lastY / firstY : 0.5;
-      // Estimate time constant from 1/e point
-      const targetY = dataMin + dataRange * Math.exp(-1);
-      const firstX = fitData[0]?.x ?? 0;
-      const estTau = fitData.length > 1 ? Math.abs((fitData[Math.floor(fitData.length / 2)]?.x - firstX) / Math.log(decayRatio + 0.01)) : 5;
-
-      // Compute initial params based on model type
-      let autoInitials = [...fitConfig.paramInitials];
-      let autoMins = [...fitConfig.paramMins];
-      let autoMaxs = [...fitConfig.paramMaxs];
-
-      if (fitConfig.modelType === 'mono-exp') {
-        // A1 = initial amplitude (positive), tau = time constant, C = baseline
-        autoInitials = [Math.max(dataRange, firstY - lastY), Math.max(0.1, Math.min(estTau, 100)), Math.max(0, lastY)];
-        autoMins = [0, 0.01, 0];
-        autoMaxs = [dataMax * 2, 10000, dataMax];
-      } else if (fitConfig.modelType === 'bi-exp') {
-        // Two decay components: fast (70%) + slow (30%)
-        const fastTau = Math.max(0.5, estTau * 0.3);
-        const slowTau = Math.max(2, estTau * 3);
-        autoInitials = [
-          dataRange * 0.7, fastTau,
-          dataRange * 0.3, slowTau,
-          Math.max(0, lastY),
-        ];
-        autoMins = [0, 0.01, 0, 0.01, 0];
-        autoMaxs = [dataMax * 2, 10000, dataMax * 2, 10000, dataMax];
-      } else if (fitConfig.modelType === 'tri-exp') {
-        autoInitials = [
-          dataRange * 0.5, estTau * 0.2,
-          dataRange * 0.3, estTau,
-          dataRange * 0.2, estTau * 5,
-          Math.max(0, lastY),
-        ];
-        autoMins = [0, 0.01, 0, 0.01, 0, 0.01, 0];
-        autoMaxs = [dataMax * 2, 10000, dataMax * 2, 10000, dataMax * 2, 10000, dataMax];
+      if (fitData.length < 3) {
+        throw new Error('拟合数据点不足，请调整拟合范围');
       }
 
+      const useIRF = fitConfig.useIRF && !!selectedIRF;
+
+      // Use the fitting engine with smart initial parameters
+      // The engine handles internal normalization, initial estimation, and LM optimization
       const result = fitTransientDecay(fitData, {
         modelType: fitConfig.modelType,
-        initialParams: autoInitials,
-        bounds: { min: autoMins, max: autoMaxs },
-        irfData: fitConfig.useIRF && selectedIRF ? selectedIRF.data : null,
+        initialParams: fitConfig.paramInitials,
+        bounds: { min: fitConfig.paramMins, max: fitConfig.paramMaxs },
+        irfData: useIRF ? selectedIRF!.data : null,
         customExpression: fitConfig.customExpression,
         customParamNames: customParamNames,
         fullTimeAxis: selectedDataset.rawData.map((p) => p.x),
         fitRange: { start: fitConfig.fitRangeStart, end: fitConfig.fitRangeEnd },
+        useSmartInitials: true,
+        timeOffset: !useIRF ? (fitConfig.timeOffset ?? undefined) : undefined,
       });
 
       setFitResult(result);
@@ -245,20 +215,35 @@ export default function TransientPanel({ datasets, irfDatasets }: TransientPanel
 
   // Chart data: merge raw + fitted + IRF with optional normalization
   // Use fullFittedCurve (on full time axis) if available, otherwise fittedCurve
+
+  // Compute x-axis shift for log scale (handle negative values)
+  const xShift = useMemo(() => {
+    if (!fitConfig.xLogScale || !selectedDataset) return 0;
+    const minX = Math.min(...selectedDataset.rawData.map((p) => p.x));
+    return minX < 0 ? (-minX + 1) : 0; // shift so all x >= 1 for log scale
+  }, [fitConfig.xLogScale, selectedDataset]);
   const chartData = useMemo(() => {
     if (!selectedDataset) return [];
     const raw = selectedDataset.rawData;
     const maxY = fitConfig.normalize ? Math.max(...raw.map((p) => p.y)) : 1;
-    
+
     // Use fullFittedCurve for display if available, otherwise fall back to fittedCurve
     const displayCurve = fitResult?.fullFittedCurve ?? fitResult?.fittedCurve;
-    
+
+    // Fit range boundaries for display layer enforcement
+    const fitStart = fitResult?.fitRange?.start ?? fitConfig.fitRangeStart;
+    const fitEnd = fitResult?.fitRange?.end ?? fitConfig.fitRangeEnd;
+
     return raw.map((p, i) => {
       const yNorm = maxY > 0 ? p.y / maxY : p.y;
-      const row: Record<string, number | null> = { x: p.x, raw: yNorm };
+      const xDisplay = fitConfig.xLogScale ? p.x + xShift : p.x;
+      const row: Record<string, number | null> = { x: xDisplay, raw: yNorm };
       if (fitResult && displayCurve) {
-        const fy = fitConfig.normalize && maxY > 0 ? displayCurve[i]?.y / maxY : displayCurve[i]?.y;
-        row.fitted = fy ?? null;
+        const fyRaw = displayCurve[i]?.y;
+        const fy = fitConfig.normalize && maxY > 0 ? fyRaw / maxY : fyRaw;
+        // Enforce fit range at display level: only show fitted values within fit range
+        const inRange = (fitStart == null || p.x >= fitStart) && (fitEnd == null || p.x <= fitEnd);
+        row.fitted = (fy != null && !isNaN(fy) && inRange) ? fy : null;
       }
       if (fitConfig.useIRF && selectedIRF) {
         const irf = selectedIRF.data.find((d) => Math.abs(d.x - p.x) < 0.01);
@@ -266,7 +251,7 @@ export default function TransientPanel({ datasets, irfDatasets }: TransientPanel
       }
       return row;
     });
-  }, [selectedDataset, fitResult, fitConfig.useIRF, selectedIRF, fitConfig.normalize]);
+  }, [selectedDataset, fitResult, fitConfig.useIRF, selectedIRF, fitConfig.normalize, fitConfig.xLogScale, xShift, fitConfig.fitRangeStart, fitConfig.fitRangeEnd]);
 
   const avgLifetime = fitResult ? calculateAverageLifetime(fitResult.parameters, fitResult.modelType) : null;
 
@@ -338,7 +323,7 @@ export default function TransientPanel({ datasets, irfDatasets }: TransientPanel
                   >
                     <div style={{ fontWeight: isActive ? 600 : 400 }}>{m.label}</div>
                     <div style={{ fontSize: 11, color: '#475569', fontFamily: 'Roboto Mono, monospace', marginTop: 2 }}>
-                      {m.formula}
+                      {!fitConfig.useIRF && fitConfig.fitRangeStart != null ? m.formulaWithOffset : m.formula}
                     </div>
                   </button>
                 );
@@ -429,6 +414,36 @@ export default function TransientPanel({ datasets, irfDatasets }: TransientPanel
             <div style={{ fontSize: 11, color: '#64748B', marginTop: 4 }}>
               空表示使用全部数据
             </div>
+
+            {/* Time offset t₀ — only for direct fitting (no IRF) */}
+            {!fitConfig.useIRF && (
+              <div style={{ marginTop: 10, padding: '8px 10px', background: 'rgba(56, 189, 248, 0.06)', borderRadius: 8, border: '1px solid rgba(56, 189, 248, 0.15)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: '#38BDF8' }}>时间偏移 t₀</span>
+                  <span style={{ fontSize: 10, color: '#475569' }}>直接拟合时 t' = t − t₀</span>
+                </div>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <input
+                    type="number"
+                    value={fitConfig.timeOffset ?? ''}
+                    onChange={(e) => setFitConfig((p) => ({
+                      ...p,
+                      timeOffset: e.target.value === '' ? null : +e.target.value,
+                    }))}
+                    placeholder={fitConfig.fitRangeStart != null ? String(fitConfig.fitRangeStart) : '自动'}
+                    style={{
+                      flex: 1, background: '#0F172A', border: '1px solid #334155',
+                      borderRadius: 6, color: '#F8FAFC', padding: '5px 8px', fontSize: 12,
+                      fontFamily: 'Roboto Mono',
+                    }}
+                  />
+                  <span style={{ fontSize: 11, color: '#475569' }}>ns</span>
+                </div>
+                <div style={{ fontSize: 10, color: '#475569', marginTop: 4 }}>
+                  空表示自动使用起始时间；设置后 A 代表 t₀ 处的振幅
+                </div>
+              </div>
+            )}
           </Card>
 
           {/* IRF */}
@@ -447,7 +462,17 @@ export default function TransientPanel({ datasets, irfDatasets }: TransientPanel
             {fitConfig.useIRF && (
               <select
                 value={fitConfig.irfId}
-                onChange={(e) => setFitConfig((p) => ({ ...p, irfId: e.target.value }))}
+                onChange={(e) => {
+                  const newIrfId = e.target.value;
+                  const selectedIrf = irfDatasets.find((ds) => ds.id === newIrfId);
+                  // Auto-set fitting start time to IRF peak position (after IRF)
+                  let newFitRangeStart = fitConfig.fitRangeStart;
+                  if (selectedIrf && selectedIrf.data.length > 0) {
+                    const peakPoint = selectedIrf.data.reduce((max, p) => p.y > max.y ? p : max, selectedIrf.data[0]);
+                    newFitRangeStart = Math.max(19, peakPoint.x); // Start fitting 19ns after IRF peak
+                  }
+                  setFitConfig((p) => ({ ...p, irfId: newIrfId, fitRangeStart: newFitRangeStart }));
+                }}
                 style={{
                   width: '100%', background: '#0F172A', border: '1px solid #334155',
                   borderRadius: 8, color: '#F8FAFC', padding: '7px 10px', fontSize: 13, cursor: 'pointer',
@@ -575,6 +600,17 @@ export default function TransientPanel({ datasets, irfDatasets }: TransientPanel
               对数 Y 轴
             </label>
 
+            {/* X Log scale */}
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13, color: '#94A3B8' }}>
+              <input
+                type="checkbox"
+                checked={fitConfig.xLogScale}
+                onChange={(e) => setFitConfig((p) => ({ ...p, xLogScale: e.target.checked }))}
+                style={{ accentColor: '#38BDF8', width: 14, height: 14 }}
+              />
+              对数 X 轴
+            </label>
+
             {/* Axis range controls */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 4 }}>
               <span style={{ fontSize: 11, color: '#475569' }}>X:</span>
@@ -682,11 +718,14 @@ export default function TransientPanel({ datasets, irfDatasets }: TransientPanel
                     <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" />
                     <XAxis
                       dataKey="x"
+                      scale={fitConfig.xLogScale ? 'log' : 'linear'}
                       domain={[
-                        fitConfig.axisRange.xMin ?? 'auto',
+                        fitConfig.xLogScale
+                          ? (fitConfig.axisRange.xMin != null ? Math.max(fitConfig.axisRange.xMin, 0.1) : 'auto')
+                          : (fitConfig.axisRange.xMin ?? 'auto'),
                         fitConfig.axisRange.xMax ?? 'auto',
                       ]}
-                      tick={{ fill: '#94A3B8', fontSize: 12, fontFamily: 'Roboto Mono' }}
+                      tick={<XTick />}
                       label={{ value: selectedDataset?.xLabel || 'Time (ns)', position: 'insideBottom', offset: -15, fill: '#64748B', fontSize: 12 }}
                       stroke="#334155"
                     />
@@ -718,9 +757,18 @@ export default function TransientPanel({ datasets, irfDatasets }: TransientPanel
                         ifOverflow="extendDomain"
                       />
                     )}
-                    <Line dataKey="raw" stroke="#38BDF8" dot={false} strokeWidth={1.5} name="raw" isAnimationActive={false} connectNulls={!fitConfig.logScale} />
+                    <Line
+                      type="monotone"
+                      dataKey="raw"
+                      stroke="#38BDF8"
+                      dot={<CustomDot r={2} fill="#38BDF8" strokeWidth={0} />}
+                      strokeWidth={1.5}
+                      name="raw"
+                      isAnimationActive={false}
+                      connectNulls={false}
+                    />
                     {fitResult && (
-                      <Line dataKey="fitted" stroke="#F59E0B" dot={false} strokeWidth={2.5} name="fitted" strokeDasharray="6 2" isAnimationActive={false} connectNulls />
+                      <Line dataKey="fitted" stroke="#F59E0B" dot={false} strokeWidth={2.5} name="fitted" strokeDasharray="6 2" isAnimationActive={false} connectNulls={false} />
                     )}
                     {fitConfig.useIRF && selectedIRF && (
                       <Line dataKey="irf" stroke="#94A3B8" dot={false} strokeWidth={1} name="irf" isAnimationActive={false} connectNulls />
@@ -758,6 +806,11 @@ export default function TransientPanel({ datasets, irfDatasets }: TransientPanel
                   {fitResult.useIRF && (
                     <span style={{ fontSize: 11, color: '#F59E0B', background: 'rgba(245, 158, 11, 0.1)', padding: '2px 8px', borderRadius: 20 }}>
                       IRF 卷积
+                    </span>
+                  )}
+                  {fitResult.timeOffset != null && fitResult.timeOffset !== 0 && (
+                    <span style={{ fontSize: 11, color: '#38BDF8', background: 'rgba(56, 189, 248, 0.1)', padding: '2px 8px', borderRadius: 20 }}>
+                      t₀ = {fitResult.timeOffset.toFixed(2)} ns
                     </span>
                   )}
                   {fitResult.fitRange && (fitResult.fitRange.start !== null || fitResult.fitRange.end !== null) && (
@@ -807,6 +860,45 @@ export default function TransientPanel({ datasets, irfDatasets }: TransientPanel
       </div>
     </div>
   );
+}
+
+// Tick formatter for X axis — clean labels like "10ns", "100ns"
+// Renders as a custom tick component to avoid tickFormatter type issues in Recharts 3.x
+function formatXAxisTick(val: unknown): string {
+  const n = typeof val === 'number' && !isNaN(val) ? val : 0;
+  if (n >= 1e6) return `${(n / 1e6).toFixed(n >= 1e7 ? 0 : 1)}M`;
+  if (n >= 1e3) return `${(n / 1e3).toFixed(n >= 1e4 ? 0 : 1)}k`;
+  if (n >= 1) return n % 1 === 0 ? `${n}` : n.toFixed(1);
+  if (n >= 0.1) return n.toFixed(1);
+  if (n >= 0.01) return n.toFixed(2);
+  if (n <= 0) return String(n);
+  return n.toExponential(1);
+}
+
+function XTick(props: { x?: number; y?: number; payload?: { value?: unknown; coordinate?: number }; index?: number; textAnchor?: string }) {
+  const { x, y, payload, textAnchor } = props;
+  const val = payload?.value;
+  // Guard: if val is not a valid number, skip rendering
+  if (val == null || (typeof val === 'number' && isNaN(val))) return null;
+  return (
+    <text
+      x={x}
+      y={y}
+      dy={16}
+      fill="#94A3B8"
+      fontSize={12}
+      fontFamily="Roboto Mono, monospace"
+      textAnchor={textAnchor ?? 'middle'}
+    >
+      {formatXAxisTick(val)}
+    </text>
+  );
+}
+
+// Small dot renderer for raw data points — makes them visible even when overlaid by fitted curve
+function CustomDot({ cx, cy, r, fill }: { cx?: number; cy?: number; r?: number; fill?: string }) {
+  if (cx == null || cy == null || r == null) return null;
+  return <circle cx={cx} cy={cy} r={r} fill={fill} />;
 }
 
 function getParamMeaning(name: string, model: FitModelType): string {

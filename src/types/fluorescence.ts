@@ -49,6 +49,7 @@ export interface FitResult {
   useIRF: boolean;
   customExpression?: string;
   fitRange?: { start: number | null; end: number | null }; // The fitting range used
+  timeOffset?: number;  // t₀: time offset used for direct fitting (t' = t - t₀)
 }
 
 // ===== Steady State Analysis =====
