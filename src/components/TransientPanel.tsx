@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   Legend, ResponsiveContainer, ReferenceLine, BarChart, Bar,
@@ -175,20 +175,8 @@ export default function TransientPanel({ datasets, irfDatasets }: TransientPanel
   // Log scale needs positive values — filter out zeros/negatives and auto-switch if needed
   const chartData = useMemo(() => {
     if (!selectedDataset) return [];
-    const rawData = selectedDataset.rawData;
-    const hasInvalid = rawData.some((p) => p.y <= 0);
-
-    // Auto-disable log scale if data has invalid values
-    if (hasInvalid && fitConfig.logScale) {
-      // Defer state update to avoid re-render loop
-      setTimeout(() => setFitConfig((p) => ({ ...p, logScale: false })), 0);
-    }
-
-    return rawData.map((p, i) => {
-      // Skip points with invalid y for log scale rendering
-      if (fitConfig.logScale && p.y <= 0) {
-        return { x: p.x, raw: null as number | null, _skip: true };
-      }
+    return selectedDataset.rawData.map((p, i) => {
+      // Skip invalid y values for log scale rendering (will show as gaps)
       const row: Record<string, number | null> = { x: p.x, raw: p.y };
       if (fitResult) row.fitted = fitResult.fittedCurve[i]?.y ?? null;
       if (fitConfig.useIRF && selectedIRF) {
@@ -197,9 +185,17 @@ export default function TransientPanel({ datasets, irfDatasets }: TransientPanel
       }
       return row;
     });
-  }, [selectedDataset, fitResult, fitConfig.useIRF, selectedIRF, fitConfig.logScale]);
+  }, [selectedDataset, fitResult, fitConfig.useIRF, selectedIRF]);
 
   const avgLifetime = fitResult ? calculateAverageLifetime(fitResult.parameters, fitResult.modelType) : null;
+
+  // Auto-disable log scale when data has zeros/negatives (useEffect avoids infinite loop)
+  const hasInvalidData = selectedDataset?.rawData.some((p) => p.y <= 0) ?? false;
+  useEffect(() => {
+    if (hasInvalidData && fitConfig.logScale) {
+      setFitConfig((p) => ({ ...p, logScale: false }));
+    }
+  }, [hasInvalidData, fitConfig.logScale]);
 
   if (datasets.length === 0) {
     return (
