@@ -38,6 +38,9 @@ interface FitConfig {
   paramMaxs: number[];
   // Axis ranges
   axisRange: AxisRange;
+  // Fitting time range (ns)
+  fitRangeStart: number | null;
+  fitRangeEnd: number | null;
 }
 
 const MODEL_OPTIONS: { value: FitModelType; label: string; formula: string; nparams: number }[] = [
@@ -116,6 +119,8 @@ export default function TransientPanel({ datasets, irfDatasets }: TransientPanel
       paramMins: def.bounds.min,
       paramMaxs: def.bounds.max,
       axisRange: { xMin: null, xMax: null, yMin: null, yMax: null },
+      fitRangeStart: null,
+      fitRangeEnd: null,
     };
   });
   const [fitResult, setFitResult] = useState<FitResult | null>(null);
@@ -165,7 +170,17 @@ export default function TransientPanel({ datasets, irfDatasets }: TransientPanel
       // Use requestAnimationFrame to allow UI update
       await new Promise((r) => setTimeout(r, 50));
 
-      const result = fitTransientDecay(selectedDataset.rawData, {
+      // Filter data to fitting range if specified
+      let fitData = selectedDataset.rawData;
+      if (fitConfig.fitRangeStart !== null || fitConfig.fitRangeEnd !== null) {
+        fitData = fitData.filter((p) => {
+          if (fitConfig.fitRangeStart !== null && p.x < fitConfig.fitRangeStart) return false;
+          if (fitConfig.fitRangeEnd !== null && p.x > fitConfig.fitRangeEnd) return false;
+          return true;
+        });
+      }
+
+      const result = fitTransientDecay(fitData, {
         modelType: fitConfig.modelType,
         initialParams: fitConfig.paramInitials,
         bounds: { min: fitConfig.paramMins, max: fitConfig.paramMaxs },
@@ -311,6 +326,58 @@ export default function TransientPanel({ datasets, irfDatasets }: TransientPanel
                 </div>
               </div>
             )}
+          </Card>
+
+          {/* Fitting Range */}
+          <Card>
+            <div style={{ fontSize: 13, fontWeight: 600, color: '#94A3B8', marginBottom: 10 }}>
+              拟合时间范围（ns）
+            </div>
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 11, color: '#475569', marginBottom: 4 }}>起始时间</div>
+                <input
+                  type="number"
+                  value={fitConfig.fitRangeStart ?? ''}
+                  onChange={(e) => setFitConfig((p) => ({
+                    ...p,
+                    fitRangeStart: e.target.value === '' ? null : +e.target.value,
+                  }))}
+                  placeholder="如 0"
+                  style={{
+                    width: '100%', background: '#0F172A', border: '1px solid #334155',
+                    borderRadius: 6, color: '#F8FAFC', padding: '6px 8px', fontSize: 12,
+                    fontFamily: 'Roboto Mono',
+                  }}
+                />
+              </div>
+              <div style={{ color: '#475569', marginTop: 16 }}>—</div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 11, color: '#475569', marginBottom: 4 }}>结束时间</div>
+                <input
+                  type="number"
+                  value={fitConfig.fitRangeEnd ?? ''}
+                  onChange={(e) => setFitConfig((p) => ({
+                    ...p,
+                    fitRangeEnd: e.target.value === '' ? null : +e.target.value,
+                  }))}
+                  placeholder="如 100"
+                  style={{
+                    width: '100%', background: '#0F172A', border: '1px solid #334155',
+                    borderRadius: 6, color: '#F8FAFC', padding: '6px 8px', fontSize: 12,
+                    fontFamily: 'Roboto Mono',
+                  }}
+                />
+              </div>
+            </div>
+            {selectedDataset && (
+              <div style={{ fontSize: 11, color: '#475569', marginTop: 8 }}>
+                数据范围: {selectedDataset.rawData[0]?.x.toFixed(2)} — {selectedDataset.rawData[selectedDataset.rawData.length - 1]?.x.toFixed(2)} ns
+              </div>
+            )}
+            <div style={{ fontSize: 11, color: '#64748B', marginTop: 4 }}>
+              空表示使用全部数据
+            </div>
           </Card>
 
           {/* IRF */}
