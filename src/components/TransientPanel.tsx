@@ -180,10 +180,54 @@ export default function TransientPanel({ datasets, irfDatasets }: TransientPanel
         });
       }
 
+      // Auto-compute smart initial params based on data
+      const dataMax = Math.max(...fitData.map((p) => p.y));
+      const dataMin = Math.min(...fitData.map((p) => p.y));
+      const dataRange = dataMax - dataMin;
+      const firstY = fitData[0]?.y ?? dataMax;
+      const lastY = fitData[fitData.length - 1]?.y ?? dataMin;
+      const decayRatio = firstY > 0 && lastY >= 0 ? lastY / firstY : 0.5;
+      // Estimate time constant from 1/e point
+      const targetY = dataMin + dataRange * Math.exp(-1);
+      const firstX = fitData[0]?.x ?? 0;
+      const estTau = fitData.length > 1 ? Math.abs((fitData[Math.floor(fitData.length / 2)]?.x - firstX) / Math.log(decayRatio + 0.01)) : 5;
+
+      // Compute initial params based on model type
+      let autoInitials = [...fitConfig.paramInitials];
+      let autoMins = [...fitConfig.paramMins];
+      let autoMaxs = [...fitConfig.paramMaxs];
+
+      if (fitConfig.modelType === 'mono-exp') {
+        // A1 = initial amplitude (positive), tau = time constant, C = baseline
+        autoInitials = [Math.max(dataRange, firstY - lastY), Math.max(0.1, Math.min(estTau, 100)), Math.max(0, lastY)];
+        autoMins = [0, 0.01, 0];
+        autoMaxs = [dataMax * 2, 10000, dataMax];
+      } else if (fitConfig.modelType === 'bi-exp') {
+        // Two decay components: fast (70%) + slow (30%)
+        const fastTau = Math.max(0.5, estTau * 0.3);
+        const slowTau = Math.max(2, estTau * 3);
+        autoInitials = [
+          dataRange * 0.7, fastTau,
+          dataRange * 0.3, slowTau,
+          Math.max(0, lastY),
+        ];
+        autoMins = [0, 0.01, 0, 0.01, 0];
+        autoMaxs = [dataMax * 2, 10000, dataMax * 2, 10000, dataMax];
+      } else if (fitConfig.modelType === 'tri-exp') {
+        autoInitials = [
+          dataRange * 0.5, estTau * 0.2,
+          dataRange * 0.3, estTau,
+          dataRange * 0.2, estTau * 5,
+          Math.max(0, lastY),
+        ];
+        autoMins = [0, 0.01, 0, 0.01, 0, 0.01, 0];
+        autoMaxs = [dataMax * 2, 10000, dataMax * 2, 10000, dataMax * 2, 10000, dataMax];
+      }
+
       const result = fitTransientDecay(fitData, {
         modelType: fitConfig.modelType,
-        initialParams: fitConfig.paramInitials,
-        bounds: { min: fitConfig.paramMins, max: fitConfig.paramMaxs },
+        initialParams: autoInitials,
+        bounds: { min: autoMins, max: autoMaxs },
         irfData: fitConfig.useIRF && selectedIRF ? selectedIRF.data : null,
         customExpression: fitConfig.customExpression,
         customParamNames: customParamNames,
