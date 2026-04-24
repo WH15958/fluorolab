@@ -20,12 +20,20 @@ interface SteadyStatePanelProps {
 
 const COLORS = ['#38BDF8', '#A78BFA', '#22C55E', '#F59E0B', '#EF4444', '#EC4899', '#14B8A6'];
 
+interface AxisRange {
+  xMin: number | null;
+  xMax: number | null;
+  yMin: number | null;
+  yMax: number | null;
+}
+
 interface ProcessingOptions {
   normalize: boolean;
   subtractBg: boolean;
   smooth: boolean;
   smoothWindow: number;
   logScale: boolean;
+  axisRange: AxisRange;
 }
 
 const SHAPE_LABELS: Record<PeakShape, string> = {
@@ -54,6 +62,7 @@ export default function SteadyStatePanel({ datasets }: SteadyStatePanelProps) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [opts, setOpts] = useState<ProcessingOptions>({
     normalize: false, subtractBg: false, smooth: false, smoothWindow: 5, logScale: false,
+    axisRange: { xMin: null, xMax: null, yMin: null, yMax: null },
   });
 
   const [fitTargetId, setFitTargetId] = useState<string>('');
@@ -329,6 +338,44 @@ export default function SteadyStatePanel({ datasets }: SteadyStatePanelProps) {
             <div style={sectionTitle()}>
               <Sliders size={14} /> 数据处理
             </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 11, color: '#475569' }}>X:</span>
+              {(['xMin', 'xMax'] as const).map((field) => (
+                <input
+                  key={field}
+                  type="number"
+                  placeholder={field === 'xMin' ? 'min' : 'max'}
+                  value={opts.axisRange[field] ?? ''}
+                  onChange={(e) => setOpts((p) => ({
+                    ...p,
+                    axisRange: { ...p.axisRange, [field]: e.target.value === '' ? null : +e.target.value },
+                  }))}
+                  style={{
+                    width: 60, background: '#0F172A', border: '1px solid #334155',
+                    borderRadius: 4, color: '#F8FAFC', padding: '2px 6px', fontSize: 11,
+                    fontFamily: 'Roboto Mono',
+                  }}
+                />
+              ))}
+              <span style={{ fontSize: 11, color: '#475569' }}>Y:</span>
+              {(['yMin', 'yMax'] as const).map((field) => (
+                <input
+                  key={field}
+                  type="number"
+                  placeholder={field === 'yMin' ? 'min' : 'max'}
+                  value={opts.axisRange[field] ?? ''}
+                  onChange={(e) => setOpts((p) => ({
+                    ...p,
+                    axisRange: { ...p.axisRange, [field]: e.target.value === '' ? null : +e.target.value },
+                  }))}
+                  style={{
+                    width: 60, background: '#0F172A', border: '1px solid #334155',
+                    borderRadius: 4, color: '#F8FAFC', padding: '2px 6px', fontSize: 11,
+                    fontFamily: 'Roboto Mono',
+                  }}
+                />
+              ))}
+            </div>
             {[
               { key: 'subtractBg', label: '基线扣除' },
               { key: 'normalize', label: '归一化' },
@@ -473,11 +520,13 @@ export default function SteadyStatePanel({ datasets }: SteadyStatePanelProps) {
                 <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" />
                 <XAxis
                   dataKey="x"
+                  domain={[opts.axisRange.xMin ?? 'auto', opts.axisRange.xMax ?? 'auto']}
                   tick={{ fill: '#94A3B8', fontSize: 12, fontFamily: 'Roboto Mono' }}
                   label={{ value: fitTarget?.xLabel || 'Wavelength (nm)', position: 'insideBottom', offset: -15, fill: '#64748B', fontSize: 12 }}
                   stroke="#334155"
                 />
                 <YAxis
+                  domain={[opts.axisRange.yMin ?? 0, opts.axisRange.yMax ?? 'auto']}
                   tick={{ fill: '#94A3B8', fontSize: 12, fontFamily: 'Roboto Mono' }}
                   label={{ value: opts.logScale ? 'log(Intensity)' : (opts.normalize ? 'Normalized' : 'Intensity'), angle: -90, position: 'insideLeft', fill: '#64748B', fontSize: 12 }}
                   stroke="#334155"

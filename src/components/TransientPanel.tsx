@@ -17,17 +17,27 @@ interface TransientPanelProps {
   irfDatasets: IRFDataset[];
 }
 
+interface AxisRange {
+  xMin: number | null;
+  xMax: number | null;
+  yMin: number | null;
+  yMax: number | null;
+}
+
 interface FitConfig {
   modelType: FitModelType;
   useIRF: boolean;
   irfId: string;
   logScale: boolean;
+  normalize: boolean;
   customExpression: string;
   customParams: string; // comma-separated names
   // Per-param override
   paramInitials: number[];
   paramMins: number[];
   paramMaxs: number[];
+  // Axis ranges
+  axisRange: AxisRange;
 }
 
 const MODEL_OPTIONS: { value: FitModelType; label: string; formula: string; nparams: number }[] = [
@@ -99,12 +109,13 @@ export default function TransientPanel({ datasets, irfDatasets }: TransientPanel
     const def = getDefaultParams('mono-exp');
     return {
       modelType: 'mono-exp', useIRF: false, irfId: '',
-      logScale: true,
+      logScale: true, normalize: false,
       customExpression: 'A * Math.exp(-t / tau) + C',
       customParams: 'A,tau,C',
       paramInitials: def.initial,
       paramMins: def.bounds.min,
       paramMaxs: def.bounds.max,
+      axisRange: { xMin: null, xMax: null, yMin: null, yMax: null },
     };
   });
   const [fitResult, setFitResult] = useState<FitResult | null>(null);
@@ -171,31 +182,35 @@ export default function TransientPanel({ datasets, irfDatasets }: TransientPanel
     }
   }, [selectedDataset, fitConfig, selectedIRF, customParamNames]);
 
-  // Chart data: merge raw + fitted + IRF
-  // Log scale needs positive values — filter out zeros/negatives and auto-switch if needed
+  // Chart data: merge raw + fitted + IRF with optional normalization
   const chartData = useMemo(() => {
     if (!selectedDataset) return [];
-    return selectedDataset.rawData.map((p, i) => {
-      // Skip invalid y values for log scale rendering (will show as gaps)
-      const row: Record<string, number | null> = { x: p.x, raw: p.y };
-      if (fitResult) row.fitted = fitResult.fittedCurve[i]?.y ?? null;
+    const raw = selectedDataset.rawData;
+    const maxY = fitConfig.normalize ? Math.max(...raw.map((p) => p.y)) : 1;
+    return raw.map((p, i) => {
+      const yNorm = maxY > 0 ? p.y / maxY : p.y;
+      const row: Record<string, number | null> = { x: p.x, raw: yNorm };
+      if (fitResult) {
+        const fy = fitConfig.normalize && maxY > 0 ? fitResult.fittedCurve[i]?.y / maxY : fitResult.fittedCurve[i]?.y;
+        row.fitted = fy ?? null;
+      }
       if (fitConfig.useIRF && selectedIRF) {
         const irf = selectedIRF.data.find((d) => Math.abs(d.x - p.x) < 0.01);
         if (irf) row.irf = irf.y;
       }
       return row;
     });
-  }, [selectedDataset, fitResult, fitConfig.useIRF, selectedIRF]);
+  }, [selectedDataset, fitResult, fitConfig.useIRF, selectedIRF, fitConfig.normalize]);
 
   const avgLifetime = fitResult ? calculateAverageLifetime(fitResult.parameters, fitResult.modelType) : null;
 
-  // Auto-disable log scale when data has zeros/negatives (useEffect avoids infinite loop)
+  // Auto-disable log scale when data has zeros/negatives or when normalization is on (useEffect avoids infinite loop)
   const hasInvalidData = selectedDataset?.rawData.some((p) => p.y <= 0) ?? false;
   useEffect(() => {
-    if (hasInvalidData && fitConfig.logScale) {
+    if ((hasInvalidData || fitConfig.normalize) && fitConfig.logScale) {
       setFitConfig((p) => ({ ...p, logScale: false }));
     }
-  }, [hasInvalidData, fitConfig.logScale]);
+  }, [hasInvalidData, fitConfig.normalize]);
 
   if (datasets.length === 0) {
     return (
@@ -418,16 +433,69 @@ export default function TransientPanel({ datasets, irfDatasets }: TransientPanel
         {/* Right: Chart + Results */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {/* Options row */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' }}>
+            {/* Normalization */}
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13, color: '#94A3B8' }}>
+              <input
+                type="checkbox"
+                checked={fitConfig.normalize}
+                onChange={(e) => setFitConfig((p) => ({ ...p, normalize: e.target.checked }))}
+                style={{ accentColor: '#A78BFA', width: 14, height: 14 }}
+              />
+              归一化
+            </label>
+
+            {/* Log scale */}
             <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13, color: '#94A3B8' }}>
               <input
                 type="checkbox"
                 checked={fitConfig.logScale}
                 onChange={(e) => setFitConfig((p) => ({ ...p, logScale: e.target.checked }))}
                 style={{ accentColor: '#A78BFA', width: 14, height: 14 }}
+                disabled={fitConfig.normalize}
               />
               对数 Y 轴
             </label>
+
+            {/* Axis range controls */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 4 }}>
+              <span style={{ fontSize: 11, color: '#475569' }}>X:</span>
+              {(['xMin', 'xMax'] as const).map((field) => (
+                <input
+                  key={field}
+                  type="number"
+                  placeholder={field === 'xMin' ? 'min' : 'max'}
+                  value={fitConfig.axisRange[field] ?? ''}
+                  onChange={(e) => setFitConfig((p) => ({
+                    ...p,
+                    axisRange: { ...p.axisRange, [field]: e.target.value === '' ? null : +e.target.value },
+                  }))}
+                  style={{
+                    width: 60, background: '#0F172A', border: '1px solid #334155',
+                    borderRadius: 4, color: '#F8FAFC', padding: '2px 6px', fontSize: 11,
+                    fontFamily: 'Roboto Mono',
+                  }}
+                />
+              ))}
+              <span style={{ fontSize: 11, color: '#475569' }}>Y:</span>
+              {(['yMin', 'yMax'] as const).map((field) => (
+                <input
+                  key={field}
+                  type="number"
+                  placeholder={field === 'yMin' ? 'min' : 'max'}
+                  value={fitConfig.axisRange[field] ?? ''}
+                  onChange={(e) => setFitConfig((p) => ({
+                    ...p,
+                    axisRange: { ...p.axisRange, [field]: e.target.value === '' ? null : +e.target.value },
+                  }))}
+                  style={{
+                    width: 60, background: '#0F172A', border: '1px solid #334155',
+                    borderRadius: 4, color: '#F8FAFC', padding: '2px 6px', fontSize: 11,
+                    fontFamily: 'Roboto Mono',
+                  }}
+                />
+              ))}
+            </div>
 
             {/* Export buttons */}
             {chartData.length > 0 && (
@@ -496,15 +564,22 @@ export default function TransientPanel({ datasets, irfDatasets }: TransientPanel
                     <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" />
                     <XAxis
                       dataKey="x"
+                      domain={[
+                        fitConfig.axisRange.xMin ?? 'auto',
+                        fitConfig.axisRange.xMax ?? 'auto',
+                      ]}
                       tick={{ fill: '#94A3B8', fontSize: 12, fontFamily: 'Roboto Mono' }}
                       label={{ value: selectedDataset?.xLabel || 'Time (ns)', position: 'insideBottom', offset: -15, fill: '#64748B', fontSize: 12 }}
                       stroke="#334155"
                     />
                     <YAxis
                       scale={fitConfig.logScale ? 'log' : 'linear'}
-                      domain={fitConfig.logScale ? ['auto', 'auto'] : [0, 'auto']}
+                      domain={[
+                        fitConfig.logScale ? 'auto' : (fitConfig.axisRange.yMin ?? 0),
+                        fitConfig.axisRange.yMax ?? 'auto',
+                      ]}
                       tick={{ fill: '#94A3B8', fontSize: 12, fontFamily: 'Roboto Mono' }}
-                      label={{ value: 'Counts', angle: -90, position: 'insideLeft', fill: '#64748B', fontSize: 12 }}
+                      label={{ value: fitConfig.normalize ? 'Intensity (norm.)' : 'Counts', angle: -90, position: 'insideLeft', fill: '#64748B', fontSize: 12 }}
                       stroke="#334155"
                     />
                     <Tooltip
