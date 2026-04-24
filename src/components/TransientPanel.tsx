@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useRef } from 'react';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   Legend, ResponsiveContainer, ReferenceLine, BarChart, Bar,
@@ -6,9 +6,11 @@ import {
 import {
   Zap, Play, RefreshCw, ChevronDown, ChevronUp,
   AlertTriangle, CheckCircle2, Settings2,
+  Download, Image,
 } from 'lucide-react';
 import type { FluorescenceDataset, IRFDataset, FitResult, FitModelType } from '../types/fluorescence';
 import { fitTransientDecay, getDefaultParams, calculateAverageLifetime } from '../utils/fittingEngine';
+import { exportChartPNG, exportMultiDatasetCSV } from '../utils/steadyStateAnalysis';
 
 interface TransientPanelProps {
   datasets: FluorescenceDataset[];
@@ -109,6 +111,7 @@ export default function TransientPanel({ datasets, irfDatasets }: TransientPanel
   const [fitting, setFitting] = useState(false);
   const [fitError, setFitError] = useState<string | null>(null);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const chartRef = useRef<HTMLDivElement>(null);
 
   const selectedDataset = datasets.find((d) => d.id === selectedDatasetId) || datasets[0];
   const selectedIRF = irfDatasets.find((d) => d.id === fitConfig.irfId);
@@ -415,42 +418,93 @@ export default function TransientPanel({ datasets, irfDatasets }: TransientPanel
               />
               对数 Y 轴
             </label>
+
+            {/* Export buttons */}
+            {chartData.length > 0 && (
+              <>
+                <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+                  <button
+                    onClick={() => {
+                      const toExport = chartData.map((r) => ({ x: r.x, y: r.raw ?? 0 }));
+                      const fittedExport = fitResult
+                        ? chartData.map((r) => ({ x: r.x, y: r.fitted ?? 0 }))
+                        : null;
+                      const sets = [{ name: '原始数据', data: toExport }];
+                      if (fittedExport) sets.push({ name: '拟合曲线', data: fittedExport });
+                      exportMultiDatasetCSV(sets, `transient_${Date.now()}.csv`);
+                    }}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 5, padding: '5px 12px',
+                      borderRadius: 6, background: '#1E293B', border: '1px solid #334155',
+                      color: '#94A3B8', fontSize: 12, cursor: 'pointer',
+                    }}
+                    title="导出数据为 CSV"
+                  >
+                    <Download size={12} /> 导出数据
+                  </button>
+                  <button
+                    onClick={() => exportChartPNG(chartRef.current, `transient_${Date.now()}.png`)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 5, padding: '5px 12px',
+                      borderRadius: 6, background: '#1E293B', border: '1px solid #334155',
+                      color: '#94A3B8', fontSize: 12, cursor: 'pointer',
+                    }}
+                    title="导出图表为 PNG"
+                  >
+                    <Image size={12} /> 导出图片
+                  </button>
+                </div>
+              </>
+            )}
           </div>
 
           {/* Main chart */}
           <Card>
-            <ResponsiveContainer width="100%" height={380}>
-              <LineChart data={chartData} margin={{ top: 5, right: 20, left: 10, bottom: 30 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" />
-                <XAxis
-                  dataKey="x"
-                  tick={{ fill: '#94A3B8', fontSize: 12, fontFamily: 'Roboto Mono' }}
-                  label={{ value: selectedDataset?.xLabel || 'Time (ns)', position: 'insideBottom', offset: -15, fill: '#64748B', fontSize: 12 }}
-                  stroke="#334155"
-                />
-                <YAxis
-                  scale={fitConfig.logScale ? 'log' : 'linear'}
-                  domain={fitConfig.logScale ? ['auto', 'auto'] : [0, 'auto']}
-                  tick={{ fill: '#94A3B8', fontSize: 12, fontFamily: 'Roboto Mono' }}
-                  label={{ value: 'Counts', angle: -90, position: 'insideLeft', fill: '#64748B', fontSize: 12 }}
-                  stroke="#334155"
-                />
-                <Tooltip
-                  contentStyle={{ background: '#0F172A', border: '1px solid #334155', borderRadius: 8, fontSize: 12, fontFamily: 'Roboto Mono' }}
-                />
-                <Legend formatter={(value) => {
-                  const map: Record<string, string> = { raw: '原始数据', fitted: '拟合曲线', irf: 'IRF' };
-                  return <span style={{ fontSize: 12, color: '#CBD5E1' }}>{map[value] || value}</span>;
-                }} />
-                <Line dataKey="raw" stroke="#38BDF8" dot={false} strokeWidth={1.5} name="raw" isAnimationActive={false} />
-                {fitResult && (
-                  <Line dataKey="fitted" stroke="#F59E0B" dot={false} strokeWidth={2.5} name="fitted" strokeDasharray="6 2" isAnimationActive={false} />
-                )}
-                {fitConfig.useIRF && selectedIRF && (
-                  <Line dataKey="irf" stroke="#94A3B8" dot={false} strokeWidth={1} name="irf" isAnimationActive={false} />
-                )}
-              </LineChart>
-            </ResponsiveContainer>
+            <div ref={chartRef}>
+              {chartData.length === 0 ? (
+                <div style={{
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                  height: 380, color: '#475569', gap: 12,
+                }}>
+                  <Zap size={36} style={{ opacity: 0.3 }} />
+                  <p style={{ fontSize: 14, margin: 0 }}>暂无数据可视化</p>
+                  <p style={{ fontSize: 12, margin: 0 }}>请上传瞬态荧光数据文件</p>
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height={380}>
+                  <LineChart data={chartData} margin={{ top: 5, right: 20, left: 10, bottom: 30 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" />
+                    <XAxis
+                      dataKey="x"
+                      tick={{ fill: '#94A3B8', fontSize: 12, fontFamily: 'Roboto Mono' }}
+                      label={{ value: selectedDataset?.xLabel || 'Time (ns)', position: 'insideBottom', offset: -15, fill: '#64748B', fontSize: 12 }}
+                      stroke="#334155"
+                    />
+                    <YAxis
+                      scale={fitConfig.logScale ? 'log' : 'linear'}
+                      domain={fitConfig.logScale ? ['auto', 'auto'] : [0, 'auto']}
+                      tick={{ fill: '#94A3B8', fontSize: 12, fontFamily: 'Roboto Mono' }}
+                      label={{ value: 'Counts', angle: -90, position: 'insideLeft', fill: '#64748B', fontSize: 12 }}
+                      stroke="#334155"
+                    />
+                    <Tooltip
+                      contentStyle={{ background: '#0F172A', border: '1px solid #334155', borderRadius: 8, fontSize: 12, fontFamily: 'Roboto Mono' }}
+                    />
+                    <Legend formatter={(value) => {
+                      const map: Record<string, string> = { raw: '原始数据', fitted: '拟合曲线', irf: 'IRF' };
+                      return <span style={{ fontSize: 12, color: '#CBD5E1' }}>{map[value] || value}</span>;
+                    }} />
+                    <Line dataKey="raw" stroke="#38BDF8" dot={false} strokeWidth={1.5} name="raw" isAnimationActive={false} />
+                    {fitResult && (
+                      <Line dataKey="fitted" stroke="#F59E0B" dot={false} strokeWidth={2.5} name="fitted" strokeDasharray="6 2" isAnimationActive={false} />
+                    )}
+                    {fitConfig.useIRF && selectedIRF && (
+                      <Line dataKey="irf" stroke="#94A3B8" dot={false} strokeWidth={1} name="irf" isAnimationActive={false} />
+                    )}
+                  </LineChart>
+                </ResponsiveContainer>
+              )}
+            </div>
           </Card>
 
           {/* Fit Results */}
