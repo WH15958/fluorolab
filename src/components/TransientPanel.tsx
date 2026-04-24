@@ -172,9 +172,23 @@ export default function TransientPanel({ datasets, irfDatasets }: TransientPanel
   }, [selectedDataset, fitConfig, selectedIRF, customParamNames]);
 
   // Chart data: merge raw + fitted + IRF
+  // Log scale needs positive values — filter out zeros/negatives and auto-switch if needed
   const chartData = useMemo(() => {
     if (!selectedDataset) return [];
-    return selectedDataset.rawData.map((p, i) => {
+    const rawData = selectedDataset.rawData;
+    const hasInvalid = rawData.some((p) => p.y <= 0);
+
+    // Auto-disable log scale if data has invalid values
+    if (hasInvalid && fitConfig.logScale) {
+      // Defer state update to avoid re-render loop
+      setTimeout(() => setFitConfig((p) => ({ ...p, logScale: false })), 0);
+    }
+
+    return rawData.map((p, i) => {
+      // Skip points with invalid y for log scale rendering
+      if (fitConfig.logScale && p.y <= 0) {
+        return { x: p.x, raw: null as number | null, _skip: true };
+      }
       const row: Record<string, number | null> = { x: p.x, raw: p.y };
       if (fitResult) row.fitted = fitResult.fittedCurve[i]?.y ?? null;
       if (fitConfig.useIRF && selectedIRF) {
@@ -183,7 +197,7 @@ export default function TransientPanel({ datasets, irfDatasets }: TransientPanel
       }
       return row;
     });
-  }, [selectedDataset, fitResult, fitConfig.useIRF, selectedIRF]);
+  }, [selectedDataset, fitResult, fitConfig.useIRF, selectedIRF, fitConfig.logScale]);
 
   const avgLifetime = fitResult ? calculateAverageLifetime(fitResult.parameters, fitResult.modelType) : null;
 
@@ -461,6 +475,16 @@ export default function TransientPanel({ datasets, irfDatasets }: TransientPanel
           {/* Main chart */}
           <Card>
             <div ref={chartRef}>
+              {hasInvalidData && (
+                <div style={{
+                  background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.3)',
+                  borderRadius: 8, padding: '8px 12px', marginBottom: 10,
+                  fontSize: 12, color: '#F59E0B', display: 'flex', alignItems: 'center', gap: 6,
+                }}>
+                  <AlertTriangle size={13} />
+                  数据含 0 或负值，已自动切换为线性坐标显示（对数坐标不支持 0/负值）
+                </div>
+              )}
               {chartData.length === 0 ? (
                 <div style={{
                   display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
@@ -494,12 +518,12 @@ export default function TransientPanel({ datasets, irfDatasets }: TransientPanel
                       const map: Record<string, string> = { raw: '原始数据', fitted: '拟合曲线', irf: 'IRF' };
                       return <span style={{ fontSize: 12, color: '#CBD5E1' }}>{map[value] || value}</span>;
                     }} />
-                    <Line dataKey="raw" stroke="#38BDF8" dot={false} strokeWidth={1.5} name="raw" isAnimationActive={false} />
+                    <Line dataKey="raw" stroke="#38BDF8" dot={false} strokeWidth={1.5} name="raw" isAnimationActive={false} connectNulls={!fitConfig.logScale} />
                     {fitResult && (
-                      <Line dataKey="fitted" stroke="#F59E0B" dot={false} strokeWidth={2.5} name="fitted" strokeDasharray="6 2" isAnimationActive={false} />
+                      <Line dataKey="fitted" stroke="#F59E0B" dot={false} strokeWidth={2.5} name="fitted" strokeDasharray="6 2" isAnimationActive={false} connectNulls />
                     )}
                     {fitConfig.useIRF && selectedIRF && (
-                      <Line dataKey="irf" stroke="#94A3B8" dot={false} strokeWidth={1} name="irf" isAnimationActive={false} />
+                      <Line dataKey="irf" stroke="#94A3B8" dot={false} strokeWidth={1} name="irf" isAnimationActive={false} connectNulls />
                     )}
                   </LineChart>
                 </ResponsiveContainer>
