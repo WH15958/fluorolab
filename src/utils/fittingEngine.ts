@@ -66,38 +66,120 @@ function buildCustomEvaluator(expression: string, paramNames: string[]) {
   };
 }
 
-// ===== IRF Convolution =====
+// ===== FFT-based Convolution =====
+// Fast O(n log n) convolution using Cooley-Tukey FFT
 
 /**
- * Convolve model decay with IRF using numerical integration
- * IRF and data should be on the same time axis
+ * Compute FFT (Cooley-Tukey iterative algorithm)
  */
-function convolveWithIRF(
-  modelFn: (t: number, params: number[]) => number,
-  params: number[],
-  timeAxis: number[],
-  irfData: DataPoint[]
-): number[] {
-  // Interpolate IRF onto timeAxis
-  const irfInterp = interpolateIRF(irfData, timeAxis);
+function fft(x: number[], y: number[]): { re: number[]; im: number[] } {
+  const n = x.length;
+  if (n <= 1) return { re: [...x], im: [...y] };
+
+  // Find power of 2 >= n
+  let m = 1;
+  while (m < n) m *= 2;
   
-  const dt = timeAxis.length > 1 ? (timeAxis[timeAxis.length - 1] - timeAxis[0]) / (timeAxis.length - 1) : 1;
-  const result: number[] = [];
-  
-  for (let i = 0; i < timeAxis.length; i++) {
-    let conv = 0;
-    for (let j = 0; j <= i; j++) {
-      const tau_val = timeAxis[i] - timeAxis[j];
-      conv += irfInterp[j] * modelFn(tau_val, params);
-    }
-    result.push(conv * dt);
+  // Pad to power of 2
+  const re = new Float64Array(m);
+  const im = new Float64Array(m);
+  for (let i = 0; i < n; i++) {
+    re[i] = x[i];
+    im[i] = y[i];
   }
-  
-  return result;
+
+  // Bit-reversal permutation
+  let j = 0;
+  for (let i = 0; i < m - 1; i++) {
+    if (i < j) {
+      [re[i], re[j]] = [re[j], re[i]];
+      [im[i], im[j]] = [im[j], im[i]];
+    }
+    let k = m >> 1;
+    while (k <= j) {
+      j -= k;
+      k >>= 1;
+    }
+    j += k;
+  }
+
+  // Cooley-Tukey iterative FFT
+  for (let len = 2; len <= m; len <<= 1) {
+    const angle = -2 * Math.PI / len;
+    const wRe = Math.cos(angle);
+    const wIm = Math.sin(angle);
+    for (let i = 0; i < m; i += len) {
+      let uRe = 1, uIm = 0;
+      for (let jj = 0; jj < len / 2; jj++) {
+        const tRe = uRe * re[i + jj + len / 2] - uIm * im[i + jj + len / 2];
+        const tIm = uRe * im[i + jj + len / 2] + uIm * re[i + jj + len / 2];
+        re[i + jj + len / 2] = re[i + jj] - tRe;
+        im[i + jj + len / 2] = im[i + jj] - tIm;
+        re[i + jj] += tRe;
+        im[i + jj] += tIm;
+        const tmp = uRe * wRe - uIm * wIm;
+        uIm = uRe * wIm + uIm * wRe;
+        uRe = tmp;
+      }
+    }
+  }
+
+  return { re: Array.from(re), im: Array.from(im) };
 }
 
+/**
+ * Compute inverse FFT
+ */
+function ifft(re: number[], im: number[]): number[] {
+  const n = re.length;
+  // Conjugate
+  for (let i = 0; i < n; i++) im[i] = -im[i];
+  const result = fft(im, re);
+  // Normalize and swap back
+  return result.im.map(v => v / n);
+}
+
+/**
+ * FFT-based convolution (O(n log n) instead of O(n²))
+ */
+function fftConvolve(a: number[], b: number[]): number[] {
+  const resultLen = a.length + b.length - 1;
+  let n = 1;
+  while (n < resultLen) n *= 2;
+  
+  // Pad arrays
+  const aPad = new Float64Array(n);
+  const bPad = new Float64Array(n);
+  for (let i = 0; i < a.length; i++) aPad[i] = a[i];
+  for (let i = 0; i < b.length; i++) bPad[i] = b[i];
+  
+  // FFT of both
+  const fa = fft(Array.from(aPad), new Array(n).fill(0));
+  const fb = fft(Array.from(bPad), new Array(n).fill(0));
+  
+  // Pointwise multiply
+  const fr = fa.re.map((v, i) => v * fb.re[i] - fa.im[i] * fb.im[i]);
+  const fi = fa.re.map((v, i) => v * fb.im[i] + fa.im[i] * fb.re[i]);
+  
+  // Inverse FFT
+  return ifft(fr, fi).slice(0, resultLen);
+}
+
+// ===== IRF Convolution =====
+
+// Cache for interpolated IRF to avoid recomputation
+let cachedIRF: { irfData: DataPoint[]; timeAxis: number[]; interp: number[] } | null = null;
+
 function interpolateIRF(irfData: DataPoint[], timeAxis: number[]): number[] {
-  return timeAxis.map((t) => {
+  // Check cache
+  if (cachedIRF && 
+      cachedIRF.irfData === irfData && 
+      cachedIRF.timeAxis === timeAxis &&
+      cachedIRF.interp.length === timeAxis.length) {
+    return cachedIRF.interp;
+  }
+  
+  const result = timeAxis.map((t) => {
     if (t <= irfData[0].x) return irfData[0].y;
     if (t >= irfData[irfData.length - 1].x) return irfData[irfData.length - 1].y;
     
@@ -110,6 +192,39 @@ function interpolateIRF(irfData: DataPoint[], timeAxis: number[]): number[] {
     const frac = (t - irfData[lo].x) / (irfData[hi].x - irfData[lo].x);
     return irfData[lo].y + frac * (irfData[hi].y - irfData[lo].y);
   });
+  
+  cachedIRF = { irfData, timeAxis, interp: result };
+  return result;
+}
+
+/**
+ * Convolve model decay with IRF using FFT (fast O(n log n))
+ */
+function convolveWithIRF(
+  modelFn: (t: number, params: number[]) => number,
+  params: number[],
+  timeAxis: number[],
+  irfData: DataPoint[]
+): number[] {
+  // Interpolate IRF onto timeAxis
+  const irfInterp = interpolateIRF(irfData, timeAxis);
+  
+  // Compute model decay at each time point
+  const modelValues = timeAxis.map((t) => modelFn(t, params));
+  
+  // Use FFT for fast convolution
+  const convolved = fftConvolve(irfInterp, modelValues);
+  
+  // Normalize by dt and trim to original length
+  const dt = timeAxis.length > 1 ? (timeAxis[timeAxis.length - 1] - timeAxis[0]) / (timeAxis.length - 1) : 1;
+  return convolved.slice(0, timeAxis.length).map(v => v * dt);
+}
+
+/**
+ * Clear IRF cache (call when IRF data changes)
+ */
+export function clearIRFCache(): void {
+  cachedIRF = null;
 }
 
 // ===== Levenberg-Marquardt Minimizer =====
@@ -136,10 +251,12 @@ interface MinimizeOptions {
   maxIter?: number;
   tol?: number;
   lambda0?: number;
+  earlyStopTol?: number;  // Early stopping threshold for cost improvement
+  earlyStopPatience?: number;  // Number of iterations with small improvement before stopping
 }
 
 /**
- * Simplified gradient descent with adaptive step (pseudo-LM)
+ * Optimized gradient descent with adaptive step and early stopping
  */
 function minimize(
   params: number[],
@@ -147,11 +264,19 @@ function minimize(
   bounds: { min: number[]; max: number[] },
   options: MinimizeOptions = {}
 ): number[] {
-  const { maxIter = 2000, tol = 1e-10 } = options;
+  const { 
+    maxIter = 500,  // Reduced from 2000 for speed
+    tol = 1e-8,      // Slightly relaxed tolerance
+    earlyStopTol = 1e-12,  // Stop if improvement < this
+    earlyStopPatience = 20  // Stop after 20 consecutive small improvements
+  } = options;
   
   let current = [...params];
   let currentCost = costFn(current);
-  let stepSize = 0.01;
+  let stepSize = 0.1;  // Increased initial step for faster convergence
+  
+  let patienceCounter = 0;
+  let lastSignificantImprovement = currentCost;
   
   for (let iter = 0; iter < maxIter; iter++) {
     const gradient = numericalGradient(current, costFn, stepSize * 0.01);
@@ -171,11 +296,22 @@ function minimize(
     const candidateCost = costFn(candidate);
     
     if (candidateCost < currentCost) {
+      const improvement = currentCost - candidateCost;
       current = candidate;
       currentCost = candidateCost;
-      stepSize *= 1.1;
+      stepSize *= 1.2;
+      
+      // Check for early stopping
+      if (improvement < earlyStopTol) {
+        patienceCounter++;
+        if (patienceCounter >= earlyStopPatience) break;
+      } else {
+        patienceCounter = 0;
+        lastSignificantImprovement = currentCost;
+      }
     } else {
       stepSize *= 0.5;
+      patienceCounter = 0;
       if (stepSize < 1e-15) break;
     }
   }
@@ -253,7 +389,7 @@ export function fitTransientDecay(
   }
   
   // Optimize
-  const fittedParams = minimize(initialParams, cost, bounds, { maxIter: 3000 });
+  const fittedParams = minimize(initialParams, cost, bounds, { maxIter: 500 });
   
   // Compute fitted curve
   let fittedValues: number[];
