@@ -58,8 +58,8 @@ const MODEL_OPTIONS: { value: FitModelType; label: string; formula: string; form
 function Card({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
   return (
     <div style={{
-      background: '#1E293B', borderRadius: 12, padding: 20,
-      border: '1px solid #334155', ...style
+      background: '#FFFFFF', borderRadius: 12, padding: 20,
+      border: '1px solid #E2E8F0', ...style
     }}>
       {children}
     </div>
@@ -74,14 +74,14 @@ function ParamRow({
   onValue: (v: number) => void; onMin: (v: number) => void; onMax: (v: number) => void;
 }) {
   const inputStyle: React.CSSProperties = {
-    background: '#0F172A', border: '1px solid #334155', borderRadius: 6,
-    color: '#F8FAFC', padding: '4px 8px', fontFamily: 'Roboto Mono, monospace',
+    background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: 6,
+    color: '#0F172A', padding: '4px 8px', fontFamily: 'Roboto Mono, monospace',
     fontSize: 12, width: '100%',
   };
 
   return (
-    <tr style={{ borderBottom: '1px solid #0F172A' }}>
-      <td style={{ padding: '7px 8px', color: '#38BDF8', fontSize: 13, fontFamily: 'Roboto Mono', fontWeight: 500, whiteSpace: 'nowrap' }}>
+    <tr style={{ borderBottom: '1px solid #F1F5F9' }}>
+      <td style={{ padding: '7px 8px', color: '#2563EB', fontSize: 13, fontFamily: 'Roboto Mono', fontWeight: 500, whiteSpace: 'nowrap' }}>
         {name}
       </td>
       <td style={{ padding: '7px 8px' }}>
@@ -290,8 +290,8 @@ export default function TransientPanel({ datasets, irfDatasets }: TransientPanel
               value={selectedDataset?.id || ''}
               onChange={(e) => setSelectedDatasetId(e.target.value)}
               style={{
-                width: '100%', background: '#0F172A', border: '1px solid #334155',
-                borderRadius: 8, color: '#F8FAFC', padding: '8px 10px', fontSize: 13,
+                width: '100%', background: '#FFFFFF', border: '1px solid #E2E8F0',
+                borderRadius: 8, color: '#0F172A', padding: '8px 10px', fontSize: 13,
                 cursor: 'pointer',
               }}
             >
@@ -313,16 +313,16 @@ export default function TransientPanel({ datasets, irfDatasets }: TransientPanel
                     onClick={() => handleModelChange(m.value)}
                     style={{
                       textAlign: 'left', padding: '9px 12px', borderRadius: 8,
-                      background: isActive ? 'rgba(167, 139, 250, 0.15)' : 'rgba(15, 23, 42, 0.5)',
-                      border: `1px solid ${isActive ? '#A78BFA' : '#334155'}`,
-                      color: isActive ? '#A78BFA' : '#94A3B8',
+                      background: isActive ? 'rgba(124, 58, 237, 0.1)' : '#F8FAFC',
+                      border: `1px solid ${isActive ? '#7C3AED' : '#E2E8F0'}`,
+                      color: isActive ? '#7C3AED' : '#64748B',
                       cursor: 'pointer',
                       fontSize: 13, fontFamily: 'Exo, sans-serif',
                       transition: 'all 0.15s ease',
                     }}
                   >
                     <div style={{ fontWeight: isActive ? 600 : 400 }}>{m.label}</div>
-                    <div style={{ fontSize: 11, color: '#475569', fontFamily: 'Roboto Mono, monospace', marginTop: 2 }}>
+                    <div style={{ fontSize: 11, color: '#94A3B8', fontFamily: 'Roboto Mono, monospace', marginTop: 2 }}>
                       {!fitConfig.useIRF && fitConfig.fitRangeStart != null ? m.formulaWithOffset : m.formula}
                     </div>
                   </button>
@@ -339,8 +339,8 @@ export default function TransientPanel({ datasets, irfDatasets }: TransientPanel
                   onChange={(e) => setFitConfig((p) => ({ ...p, customExpression: e.target.value }))}
                   rows={3}
                   style={{
-                    width: '100%', background: '#0F172A', border: '1px solid #334155',
-                    borderRadius: 6, color: '#38BDF8', padding: '8px', fontSize: 12,
+                    width: '100%', background: '#F8FAFC', border: '1px solid #E2E8F0',
+                    borderRadius: 6, color: '#2563EB', padding: '8px', fontSize: 12,
                     fontFamily: 'Roboto Mono, monospace', resize: 'vertical',
                   }}
                   placeholder="A * Math.exp(-t / tau) + C"
@@ -351,15 +351,15 @@ export default function TransientPanel({ datasets, irfDatasets }: TransientPanel
                   value={fitConfig.customParams}
                   onChange={(e) => handleCustomParamsChange(e.target.value)}
                   style={{
-                    width: '100%', background: '#0F172A', border: '1px solid #334155',
-                    borderRadius: 6, color: '#F8FAFC', padding: '6px 8px', fontSize: 12,
+                    width: '100%', background: '#F8FAFC', border: '1px solid #E2E8F0',
+                    borderRadius: 6, color: '#0F172A', padding: '6px 8px', fontSize: 12,
                     fontFamily: 'Roboto Mono, monospace',
                   }}
                   placeholder="A,tau,C"
                 />
-                <div style={{ fontSize: 11, color: '#475569', marginTop: 4 }}>
-                  可使用 Math.exp / Math.pow / Math.log 等内置函数
-                </div>
+                <div style={{ fontSize: 11, color: '#94A3B8', marginTop: 4 }}>
+                   可使用 Math.exp / Math.pow / Math.log 等内置函数
+                  </div>
               </div>
             )}
           </Card>
@@ -381,8 +381,8 @@ export default function TransientPanel({ datasets, irfDatasets }: TransientPanel
                   }))}
                   placeholder="如 0"
                   style={{
-                    width: '100%', background: '#0F172A', border: '1px solid #334155',
-                    borderRadius: 6, color: '#F8FAFC', padding: '6px 8px', fontSize: 12,
+                    width: '100%', background: '#F8FAFC', border: '1px solid #E2E8F0',
+                    borderRadius: 6, color: '#0F172A', padding: '6px 8px', fontSize: 12,
                     fontFamily: 'Roboto Mono',
                   }}
                 />
@@ -417,10 +417,10 @@ export default function TransientPanel({ datasets, irfDatasets }: TransientPanel
 
             {/* Time offset t₀ — only for direct fitting (no IRF) */}
             {!fitConfig.useIRF && (
-              <div style={{ marginTop: 10, padding: '8px 10px', background: 'rgba(56, 189, 248, 0.06)', borderRadius: 8, border: '1px solid rgba(56, 189, 248, 0.15)' }}>
+              <div style={{ marginTop: 10, padding: '8px 10px', background: 'rgba(37, 99, 235, 0.04)', borderRadius: 8, border: '1px solid rgba(37, 99, 235, 0.15)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: '#38BDF8' }}>时间偏移 t₀</span>
-                  <span style={{ fontSize: 10, color: '#475569' }}>直接拟合时 t' = t − t₀</span>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: '#2563EB' }}>时间偏移 t₀</span>
+                  <span style={{ fontSize: 10, color: '#94A3B8' }}>直接拟合时 t' = t − t₀</span>
                 </div>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                   <input
@@ -432,16 +432,16 @@ export default function TransientPanel({ datasets, irfDatasets }: TransientPanel
                     }))}
                     placeholder={fitConfig.fitRangeStart != null ? String(fitConfig.fitRangeStart) : '自动'}
                     style={{
-                      flex: 1, background: '#0F172A', border: '1px solid #334155',
-                      borderRadius: 6, color: '#F8FAFC', padding: '5px 8px', fontSize: 12,
+                      flex: 1, background: '#F8FAFC', border: '1px solid #E2E8F0',
+                      borderRadius: 6, color: '#0F172A', padding: '5px 8px', fontSize: 12,
                       fontFamily: 'Roboto Mono',
                     }}
                   />
                   <span style={{ fontSize: 11, color: '#475569' }}>ns</span>
                 </div>
-                <div style={{ fontSize: 10, color: '#475569', marginTop: 4 }}>
-                  空表示自动使用起始时间；设置后 A 代表 t₀ 处的振幅
-                </div>
+                <div style={{ fontSize: 10, color: '#94A3B8', marginTop: 4 }}>
+                   空表示自动使用起始时间；设置后 A 代表 t₀ 处的振幅
+                  </div>
               </div>
             )}
           </Card>
@@ -455,7 +455,7 @@ export default function TransientPanel({ datasets, irfDatasets }: TransientPanel
                 onChange={(e) => setFitConfig((p) => ({ ...p, useIRF: e.target.checked }))}
                 style={{ accentColor: '#F59E0B', width: 15, height: 15 }}
               />
-              <span style={{ fontSize: 13, fontWeight: 600, color: fitConfig.useIRF ? '#F59E0B' : '#94A3B8' }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: fitConfig.useIRF ? '#F59E0B' : '#64748B' }}>
                 使用 IRF 卷积拟合
               </span>
             </label>
@@ -474,8 +474,8 @@ export default function TransientPanel({ datasets, irfDatasets }: TransientPanel
                   setFitConfig((p) => ({ ...p, irfId: newIrfId, fitRangeStart: newFitRangeStart }));
                 }}
                 style={{
-                  width: '100%', background: '#0F172A', border: '1px solid #334155',
-                  borderRadius: 8, color: '#F8FAFC', padding: '7px 10px', fontSize: 13, cursor: 'pointer',
+                  width: '100%', background: '#FFFFFF', border: '1px solid #E2E8F0',
+                  borderRadius: 8, color: '#0F172A', padding: '7px 10px', fontSize: 13, cursor: 'pointer',
                 }}
               >
                 <option value="">-- 选择 IRF 文件 --</option>
@@ -498,7 +498,7 @@ export default function TransientPanel({ datasets, irfDatasets }: TransientPanel
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 width: '100%', background: 'none', border: 'none',
-                color: '#94A3B8', cursor: 'pointer', fontSize: 13, fontWeight: 600, padding: 0,
+                color: '#64748B', cursor: 'pointer', fontSize: 13, fontWeight: 600, padding: 0,
               }}
             >
               <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -511,9 +511,9 @@ export default function TransientPanel({ datasets, irfDatasets }: TransientPanel
               <div style={{ marginTop: 12, overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
                   <thead>
-                    <tr style={{ borderBottom: '1px solid #334155' }}>
+                    <tr style={{ borderBottom: '1px solid #E2E8F0' }}>
                       {['参数', '初始值', '最小值', '最大值'].map((h) => (
-                        <th key={h} style={{ textAlign: 'left', padding: '5px 8px', color: '#64748B', fontWeight: 500 }}>{h}</th>
+                        <th key={h} style={{ textAlign: 'left', padding: '5px 8px', color: '#94A3B8', fontWeight: 500 }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
@@ -548,11 +548,11 @@ export default function TransientPanel({ datasets, irfDatasets }: TransientPanel
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
               padding: '12px 20px', borderRadius: 10,
-              background: fitting ? '#334155' : 'linear-gradient(135deg, #7C3AED, #38BDF8)',
+              background: fitting ? '#CBD5E1' : 'linear-gradient(135deg, #7C3AED, #2563EB)',
               border: 'none', color: 'white', fontSize: 15, fontWeight: 600,
               cursor: fitting ? 'not-allowed' : 'pointer',
               transition: 'all 0.2s ease',
-              boxShadow: fitting ? 'none' : '0 4px 20px rgba(56, 189, 248, 0.3)',
+              boxShadow: fitting ? 'none' : '0 4px 20px rgba(37, 99, 235, 0.3)',
             }}
           >
             {fitting ? (
@@ -578,35 +578,35 @@ export default function TransientPanel({ datasets, irfDatasets }: TransientPanel
           {/* Options row */}
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' }}>
             {/* Normalization */}
-            <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13, color: '#94A3B8' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13, color: '#64748B' }}>
               <input
                 type="checkbox"
                 checked={fitConfig.normalize}
                 onChange={(e) => setFitConfig((p) => ({ ...p, normalize: e.target.checked }))}
-                style={{ accentColor: '#A78BFA', width: 14, height: 14 }}
+                style={{ accentColor: '#7C3AED', width: 14, height: 14 }}
               />
               归一化
             </label>
 
             {/* Log scale */}
-            <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13, color: '#94A3B8' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13, color: '#64748B' }}>
               <input
                 type="checkbox"
                 checked={fitConfig.logScale}
                 onChange={(e) => setFitConfig((p) => ({ ...p, logScale: e.target.checked }))}
-                style={{ accentColor: '#A78BFA', width: 14, height: 14 }}
+                style={{ accentColor: '#7C3AED', width: 14, height: 14 }}
                 disabled={fitConfig.normalize}
               />
               对数 Y 轴
             </label>
 
             {/* X Log scale */}
-            <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13, color: '#94A3B8' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13, color: '#64748B' }}>
               <input
                 type="checkbox"
                 checked={fitConfig.xLogScale}
                 onChange={(e) => setFitConfig((p) => ({ ...p, xLogScale: e.target.checked }))}
-                style={{ accentColor: '#38BDF8', width: 14, height: 14 }}
+                style={{ accentColor: '#2563EB', width: 14, height: 14 }}
               />
               对数 X 轴
             </label>
@@ -624,11 +624,11 @@ export default function TransientPanel({ datasets, irfDatasets }: TransientPanel
                     ...p,
                     axisRange: { ...p.axisRange, [field]: e.target.value === '' ? null : +e.target.value },
                   }))}
-                  style={{
-                    width: 60, background: '#0F172A', border: '1px solid #334155',
-                    borderRadius: 4, color: '#F8FAFC', padding: '2px 6px', fontSize: 11,
-                    fontFamily: 'Roboto Mono',
-                  }}
+                    style={{
+                      width: 60, background: '#F8FAFC', border: '1px solid #E2E8F0',
+                      borderRadius: 4, color: '#0F172A', padding: '2px 6px', fontSize: 11,
+                      fontFamily: 'Roboto Mono',
+                    }}
                 />
               ))}
               <span style={{ fontSize: 11, color: '#475569' }}>Y:</span>
@@ -642,11 +642,11 @@ export default function TransientPanel({ datasets, irfDatasets }: TransientPanel
                     ...p,
                     axisRange: { ...p.axisRange, [field]: e.target.value === '' ? null : +e.target.value },
                   }))}
-                  style={{
-                    width: 60, background: '#0F172A', border: '1px solid #334155',
-                    borderRadius: 4, color: '#F8FAFC', padding: '2px 6px', fontSize: 11,
-                    fontFamily: 'Roboto Mono',
-                  }}
+                    style={{
+                      width: 60, background: '#F8FAFC', border: '1px solid #E2E8F0',
+                      borderRadius: 4, color: '#0F172A', padding: '2px 6px', fontSize: 11,
+                      fontFamily: 'Roboto Mono',
+                    }}
                 />
               ))}
             </div>
@@ -667,8 +667,8 @@ export default function TransientPanel({ datasets, irfDatasets }: TransientPanel
                     }}
                     style={{
                       display: 'flex', alignItems: 'center', gap: 5, padding: '5px 12px',
-                      borderRadius: 6, background: '#1E293B', border: '1px solid #334155',
-                      color: '#94A3B8', fontSize: 12, cursor: 'pointer',
+                      borderRadius: 6, background: '#FFFFFF', border: '1px solid #E2E8F0',
+                      color: '#64748B', fontSize: 12, cursor: 'pointer',
                     }}
                     title="导出数据为 CSV"
                   >
@@ -678,8 +678,8 @@ export default function TransientPanel({ datasets, irfDatasets }: TransientPanel
                     onClick={() => exportChartPNG(chartRef.current, `transient_${Date.now()}.png`)}
                     style={{
                       display: 'flex', alignItems: 'center', gap: 5, padding: '5px 12px',
-                      borderRadius: 6, background: '#1E293B', border: '1px solid #334155',
-                      color: '#94A3B8', fontSize: 12, cursor: 'pointer',
+                      borderRadius: 6, background: '#FFFFFF', border: '1px solid #E2E8F0',
+                      color: '#64748B', fontSize: 12, cursor: 'pointer',
                     }}
                     title="导出图表为 PNG"
                   >
@@ -715,7 +715,7 @@ export default function TransientPanel({ datasets, irfDatasets }: TransientPanel
               ) : (
                 <ResponsiveContainer width="100%" height={380}>
                   <LineChart data={chartData} margin={{ top: 5, right: 20, left: 10, bottom: 30 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
                     <XAxis
                       dataKey="x"
                       scale={fitConfig.xLogScale ? 'log' : 'linear'}
@@ -726,8 +726,8 @@ export default function TransientPanel({ datasets, irfDatasets }: TransientPanel
                         fitConfig.axisRange.xMax ?? 'auto',
                       ]}
                       tick={<XTick />}
-                      label={{ value: selectedDataset?.xLabel || 'Time (ns)', position: 'insideBottom', offset: -15, fill: '#64748B', fontSize: 12 }}
-                      stroke="#334155"
+                      label={{ value: selectedDataset?.xLabel || 'Time (ns)', position: 'insideBottom', offset: -15, fill: '#94A3B8', fontSize: 12 }}
+                      stroke="#E2E8F0"
                     />
                     <YAxis
                       scale={fitConfig.logScale ? 'log' : 'linear'}
@@ -735,16 +735,16 @@ export default function TransientPanel({ datasets, irfDatasets }: TransientPanel
                         fitConfig.logScale ? 'auto' : (fitConfig.axisRange.yMin ?? 0),
                         fitConfig.axisRange.yMax ?? 'auto',
                       ]}
-                      tick={{ fill: '#94A3B8', fontSize: 12, fontFamily: 'Roboto Mono' }}
-                      label={{ value: fitConfig.normalize ? 'Intensity (norm.)' : 'Counts', angle: -90, position: 'insideLeft', fill: '#64748B', fontSize: 12 }}
-                      stroke="#334155"
+                      tick={{ fill: '#64748B', fontSize: 12, fontFamily: 'Roboto Mono' }}
+                      label={{ value: fitConfig.normalize ? 'Intensity (norm.)' : 'Counts', angle: -90, position: 'insideLeft', fill: '#94A3B8', fontSize: 12 }}
+                      stroke="#E2E8F0"
                     />
                     <Tooltip
-                      contentStyle={{ background: '#0F172A', border: '1px solid #334155', borderRadius: 8, fontSize: 12, fontFamily: 'Roboto Mono' }}
+                      contentStyle={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: 8, fontSize: 12, fontFamily: 'Roboto Mono' }}
                     />
                     <Legend formatter={(value) => {
                       const map: Record<string, string> = { raw: '原始数据', fitted: '拟合曲线', irf: 'IRF' };
-                      return <span style={{ fontSize: 12, color: '#CBD5E1' }}>{map[value] || value}</span>;
+                      return <span style={{ fontSize: 12, color: '#334155' }}>{map[value] || value}</span>;
                     }} />
                     {/* Highlight fitting range */}
                     {fitResult?.fitRange && (fitResult.fitRange.start !== null || fitResult.fitRange.end !== null) && (
@@ -790,7 +790,7 @@ export default function TransientPanel({ datasets, irfDatasets }: TransientPanel
                   ...(avgLifetime !== null ? [{ label: '加权平均寿命 ⟨τ⟩', value: `${avgLifetime.toFixed(4)} ns`, color: '#A78BFA' }] : []),
                 ].map(({ label, value, color }) => (
                   <div key={label} style={{
-                    background: '#1E293B', borderRadius: 10, padding: '14px 16px',
+                    background: '#FFFFFF', borderRadius: 10, padding: '14px 16px',
                     border: `1px solid ${color}30`,
                   }}>
                     <div style={{ fontSize: 11, color: '#64748B', marginBottom: 4 }}>{label}</div>
@@ -821,18 +821,18 @@ export default function TransientPanel({ datasets, irfDatasets }: TransientPanel
                 </div>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, fontFamily: 'Roboto Mono, monospace' }}>
                   <thead>
-                    <tr style={{ borderBottom: '1px solid #334155' }}>
+                    <tr style={{ borderBottom: '1px solid #E2E8F0' }}>
                       {['参数', '拟合值', '物理意义'].map((h) => (
-                        <th key={h} style={{ textAlign: 'left', padding: '7px 12px', color: '#64748B', fontWeight: 500 }}>{h}</th>
+                        <th key={h} style={{ textAlign: 'left', padding: '7px 12px', color: '#94A3B8', fontWeight: 500 }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {fitResult.parameters.map((param, i) => (
-                      <tr key={i} style={{ borderBottom: '1px solid #0F172A' }}>
-                        <td style={{ padding: '9px 12px', color: '#A78BFA', fontWeight: 600 }}>{param.name}</td>
-                        <td style={{ padding: '9px 12px', color: '#F8FAFC' }}>{param.value.toPrecision(6)}</td>
-                        <td style={{ padding: '9px 12px', color: '#64748B', fontSize: 12 }}>
+                      <tr key={i} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                        <td style={{ padding: '9px 12px', color: '#7C3AED', fontWeight: 600 }}>{param.name}</td>
+                        <td style={{ padding: '9px 12px', color: '#0F172A' }}>{param.value.toPrecision(6)}</td>
+                        <td style={{ padding: '9px 12px', color: '#94A3B8', fontSize: 12 }}>
                           {getParamMeaning(param.name, fitResult.modelType)}
                         </td>
                       </tr>
@@ -846,10 +846,10 @@ export default function TransientPanel({ datasets, irfDatasets }: TransientPanel
                 <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 12 }}>残差分析</div>
                 <ResponsiveContainer width="100%" height={150}>
                   <BarChart data={fitResult.residuals.filter((_, i) => i % Math.max(1, Math.floor(fitResult.residuals.length / 200)) === 0)} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
-                    <XAxis dataKey="x" tick={{ fill: '#64748B', fontSize: 10 }} stroke="#334155" />
-                    <YAxis tick={{ fill: '#64748B', fontSize: 10 }} stroke="#334155" />
-                    <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" />
-                    <ReferenceLine y={0} stroke="#334155" />
+                    <XAxis dataKey="x" tick={{ fill: '#94A3B8', fontSize: 10 }} stroke="#E2E8F0" />
+                    <YAxis tick={{ fill: '#94A3B8', fontSize: 10 }} stroke="#E2E8F0" />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
+                    <ReferenceLine y={0} stroke="#CBD5E1" />
                     <Bar dataKey="y" fill="#38BDF8" opacity={0.6} />
                   </BarChart>
                 </ResponsiveContainer>

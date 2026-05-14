@@ -3,16 +3,16 @@
 @import "tailwindcss";
 
 :root {
-  --color-primary: #1E293B;
-  --color-secondary: #334155;
+  --color-primary: #F8FAFC;
+  --color-secondary: #F1F5F9;
   --color-cta: #22C55E;
-  --color-bg: #0F172A;
-  --color-text: #F8FAFC;
-  --color-accent: #38BDF8;
-  --color-accent2: #A78BFA;
+  --color-bg: #F8FAFC;
+  --color-text: #0F172A;
+  --color-accent: #2563EB;
+  --color-accent2: #7C3AED;
   --color-muted: #64748B;
-  --color-border: #1E293B;
-  --color-card: #1E293B;
+  --color-border: #E2E8F0;
+  --color-card: #FFFFFF;
   --color-success: #22C55E;
   --color-warning: #F59E0B;
   --color-danger: #EF4444;
@@ -25,8 +25,8 @@
 body {
   margin: 0;
   padding: 0;
-  background-color: #0F172A;
-  color: #F8FAFC;
+  background-color: #F8FAFC;
+  color: #0F172A;
   font-family: 'Exo', sans-serif;
 }
 
@@ -40,14 +40,14 @@ code, pre, .mono {
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #0F172A;
+  background: #F1F5F9;
 }
 ::-webkit-scrollbar-thumb {
-  background: #334155;
+  background: #CBD5E1;
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #475569;
+  background: #94A3B8;
 }
 
 /* Smooth transitions */
@@ -65,18 +65,18 @@ code, pre, .mono {
 
 /* File drop zone */
 .drop-zone {
-  border: 2px dashed #334155;
+  border: 2px dashed #CBD5E1;
   transition: all 0.2s ease;
 }
 .drop-zone:hover, .drop-zone.drag-over {
-  border-color: #38BDF8;
-  background: rgba(56, 189, 248, 0.05);
+  border-color: #2563EB;
+  background: rgba(37, 99, 235, 0.05);
 }
 
 /* Chart container */
 .recharts-tooltip-wrapper .recharts-default-tooltip {
-  background: #1E293B !important;
-  border: 1px solid #334155 !important;
+  background: #FFFFFF !important;
+  border: 1px solid #E2E8F0 !important;
   border-radius: 8px !important;
 }
 

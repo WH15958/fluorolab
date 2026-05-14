@@ -15,8 +15,8 @@ export default function Navbar({ activeTab, onTabChange }: NavbarProps) {
   return (
     <nav
       style={{
-        background: 'rgba(15, 23, 42, 0.95)',
-        borderBottom: '1px solid #1E293B',
+        background: 'rgba(255, 255, 255, 0.95)',
+        borderBottom: '1px solid #E2E8F0',
         backdropFilter: 'blur(12px)',
         position: 'sticky',
         top: 0,
@@ -29,7 +29,7 @@ export default function Navbar({ activeTab, onTabChange }: NavbarProps) {
           <div
             style={{
               width: 32, height: 32,
-              background: 'linear-gradient(135deg, #38BDF8, #A78BFA)',
+              background: 'linear-gradient(135deg, #2563EB, #7C3AED)',
               borderRadius: 8,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}
@@ -37,7 +37,7 @@ export default function Navbar({ activeTab, onTabChange }: NavbarProps) {
             <FlaskConical size={18} color="white" />
           </div>
           <span style={{ fontFamily: 'Exo, sans-serif', fontWeight: 700, fontSize: 18, letterSpacing: '-0.5px' }}>
-            Fluoro<span style={{ color: '#38BDF8' }}>Lab</span>
+            Fluoro<span style={{ color: '#2563EB' }}>Lab</span>
           </span>
         </div>
 
@@ -49,30 +49,30 @@ export default function Navbar({ activeTab, onTabChange }: NavbarProps) {
               <button
                 key={id}
                 onClick={() => onTabChange(id)}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 8,
-                  padding: '12px 18px',
-                  background: isActive ? 'rgba(56, 189, 248, 0.1)' : 'transparent',
-                  border: 'none',
-                  borderBottom: isActive ? '2px solid #38BDF8' : '2px solid transparent',
-                  color: isActive ? '#38BDF8' : '#94A3B8',
-                  cursor: 'pointer',
-                  fontSize: 14,
-                  fontFamily: 'Exo, sans-serif',
-                  fontWeight: isActive ? 600 : 400,
-                  transition: 'all 0.2s ease',
-                  whiteSpace: 'nowrap',
-                }}
-                onMouseEnter={(e) => {
-                  if (!isActive) {
-                    (e.currentTarget as HTMLButtonElement).style.color = '#CBD5E1';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!isActive) {
-                    (e.currentTarget as HTMLButtonElement).style.color = '#94A3B8';
-                  }
-                }}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    padding: '12px 18px',
+                    background: isActive ? 'rgba(37, 99, 235, 0.08)' : 'transparent',
+                    border: 'none',
+                    borderBottom: isActive ? '2px solid #2563EB' : '2px solid transparent',
+                    color: isActive ? '#2563EB' : '#64748B',
+                    cursor: 'pointer',
+                    fontSize: 14,
+                    fontFamily: 'Exo, sans-serif',
+                    fontWeight: isActive ? 600 : 400,
+                    transition: 'all 0.2s ease',
+                    whiteSpace: 'nowrap',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isActive) {
+                      (e.currentTarget as HTMLButtonElement).style.color = '#334155';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isActive) {
+                      (e.currentTarget as HTMLButtonElement).style.color = '#64748B';
+                    }
+                  }}
               >
                 <Icon size={16} />
                 {label}
@@ -83,8 +83,8 @@ export default function Navbar({ activeTab, onTabChange }: NavbarProps) {
 
         {/* Right side badge */}
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
-          <BarChart3 size={14} color="#64748B" />
-          <span style={{ fontSize: 12, color: '#64748B', fontFamily: 'Roboto Mono, monospace' }}>
+          <BarChart3 size={14} color="#94A3B8" />
+          <span style={{ fontSize: 12, color: '#94A3B8', fontFamily: 'Roboto Mono, monospace' }}>
             Fluorescence Data Analysis
           </span>
         </div>

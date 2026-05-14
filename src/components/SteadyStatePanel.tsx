@@ -18,7 +18,7 @@ interface SteadyStatePanelProps {
   datasets: FluorescenceDataset[];
 }
 
-const COLORS = ['#38BDF8', '#A78BFA', '#22C55E', '#F59E0B', '#EF4444', '#EC4899', '#14B8A6'];
+const COLORS = ['#2563EB', '#7C3AED', '#22C55E', '#F59E0B', '#EF4444', '#EC4899', '#14B8A6'];
 
 interface AxisRange {
   xMin: number | null;
@@ -350,11 +350,11 @@ export default function SteadyStatePanel({ datasets }: SteadyStatePanelProps) {
                     ...p,
                     axisRange: { ...p.axisRange, [field]: e.target.value === '' ? null : +e.target.value },
                   }))}
-                  style={{
-                    width: 60, background: '#0F172A', border: '1px solid #334155',
-                    borderRadius: 4, color: '#F8FAFC', padding: '2px 6px', fontSize: 11,
-                    fontFamily: 'Roboto Mono',
-                  }}
+                    style={{
+                      width: 60, background: '#F8FAFC', border: '1px solid #E2E8F0',
+                      borderRadius: 4, color: '#0F172A', padding: '2px 6px', fontSize: 11,
+                      fontFamily: 'Roboto Mono',
+                    }}
                 />
               ))}
               <span style={{ fontSize: 11, color: '#475569' }}>Y:</span>
@@ -368,11 +368,11 @@ export default function SteadyStatePanel({ datasets }: SteadyStatePanelProps) {
                     ...p,
                     axisRange: { ...p.axisRange, [field]: e.target.value === '' ? null : +e.target.value },
                   }))}
-                  style={{
-                    width: 60, background: '#0F172A', border: '1px solid #334155',
-                    borderRadius: 4, color: '#F8FAFC', padding: '2px 6px', fontSize: 11,
-                    fontFamily: 'Roboto Mono',
-                  }}
+                    style={{
+                      width: 60, background: '#F8FAFC', border: '1px solid #E2E8F0',
+                      borderRadius: 4, color: '#0F172A', padding: '2px 6px', fontSize: 11,
+                      fontFamily: 'Roboto Mono',
+                    }}
                 />
               ))}
             </div>
@@ -389,7 +389,7 @@ export default function SteadyStatePanel({ datasets }: SteadyStatePanelProps) {
                   onChange={(e) => setOpts((prev) => ({ ...prev, [key]: e.target.checked }))}
                   style={{ accentColor: '#38BDF8', width: 14, height: 14 }}
                 />
-                <span style={{ color: '#CBD5E1' }}>{label}</span>
+                <span style={{ color: '#334155' }}>{label}</span>
               </label>
             ))}
             {opts.smooth && (
@@ -433,9 +433,9 @@ export default function SteadyStatePanel({ datasets }: SteadyStatePanelProps) {
                     }}
                     style={{
                       flex: 1, padding: '5px 3px', borderRadius: 6, fontSize: 11,
-                      background: peakShape === s ? '#38BDF820' : '#0F172A',
-                      border: `1px solid ${peakShape === s ? '#38BDF8' : '#334155'}`,
-                      color: peakShape === s ? '#38BDF8' : '#64748B', cursor: 'pointer',
+                      background: peakShape === s ? '#2563EB15' : '#F1F5F9',
+                      border: `1px solid ${peakShape === s ? '#2563EB' : '#E2E8F0'}`,
+                      color: peakShape === s ? '#2563EB' : '#64748B', cursor: 'pointer',
                     }}
                   >
                     {SHAPE_LABELS[s]}
@@ -467,7 +467,7 @@ export default function SteadyStatePanel({ datasets }: SteadyStatePanelProps) {
             {manualPeaks.length > 0 && (
               <div style={{ marginBottom: 10 }}>
                 {manualPeaks.map((p, i) => (
-                  <div key={p.id} style={{ background: '#0F172A', borderRadius: 8, padding: '8px 10px', marginBottom: 6, border: '1px solid #1E293B' }}>
+                  <div key={p.id} style={{ background: '#F8FAFC', borderRadius: 8, padding: '8px 10px', marginBottom: 6, border: '1px solid #E2E8F0' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
                       <span style={{ fontSize: 11, color: COLORS[(i + 1) % COLORS.length], fontWeight: 600 }}>
                         峰 {i + 1}
@@ -514,27 +514,27 @@ export default function SteadyStatePanel({ datasets }: SteadyStatePanelProps) {
 
         {/* Main content */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <div ref={chartRef} style={{ background: '#1E293B', borderRadius: 12, padding: 20, border: '1px solid #334155' }}>
+          <div ref={chartRef} style={{ background: '#FFFFFF', borderRadius: 12, padding: 20, border: '1px solid #E2E8F0' }}>
             <ResponsiveContainer width="100%" height={fitResult ? 320 : 380}>
               <LineChart data={fitResult ? fitChartData : chartData} margin={{ top: 5, right: 20, left: 10, bottom: 30 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
                 <XAxis
                   dataKey="x"
                   domain={[opts.axisRange.xMin ?? 'auto', opts.axisRange.xMax ?? 'auto']}
-                  tick={{ fill: '#94A3B8', fontSize: 12, fontFamily: 'Roboto Mono' }}
-                  label={{ value: fitTarget?.xLabel || 'Wavelength (nm)', position: 'insideBottom', offset: -15, fill: '#64748B', fontSize: 12 }}
-                  stroke="#334155"
+                    tick={{ fill: '#64748B', fontSize: 12, fontFamily: 'Roboto Mono' }}
+                    label={{ value: fitTarget?.xLabel || 'Wavelength (nm)', position: 'insideBottom', offset: -15, fill: '#94A3B8', fontSize: 12 }}
+                    stroke="#E2E8F0"
                 />
                 <YAxis
                   domain={[opts.axisRange.yMin ?? 0, opts.axisRange.yMax ?? 'auto']}
-                  tick={{ fill: '#94A3B8', fontSize: 12, fontFamily: 'Roboto Mono' }}
-                  label={{ value: opts.logScale ? 'log(Intensity)' : (opts.normalize ? 'Normalized' : 'Intensity'), angle: -90, position: 'insideLeft', fill: '#64748B', fontSize: 12 }}
-                  stroke="#334155"
+                    tick={{ fill: '#64748B', fontSize: 12, fontFamily: 'Roboto Mono' }}
+                    label={{ value: opts.logScale ? 'log(Intensity)' : (opts.normalize ? 'Normalized' : 'Intensity'), angle: -90, position: 'insideLeft', fill: '#94A3B8', fontSize: 12 }}
+                    stroke="#E2E8F0"
                 />
-                <Tooltip contentStyle={{ background: '#0F172A', border: '1px solid #334155', borderRadius: 8, fontSize: 12, fontFamily: 'Roboto Mono' }} />
+                <Tooltip contentStyle={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: 8, fontSize: 12, fontFamily: 'Roboto Mono' }} />
                 <Legend formatter={(value) => {
                   const ds = datasets.find((d) => d.id === value);
-                  return <span style={{ fontSize: 12, color: '#CBD5E1' }}>{ds?.name || value}</span>;
+                  return <span style={{ fontSize: 12, color: '#334155' }}>{ds?.name || value}</span>;
                 }} />
 
                 {fitResult ? (
@@ -565,9 +565,9 @@ export default function SteadyStatePanel({ datasets }: SteadyStatePanelProps) {
                 <div style={{ fontSize: 11, color: '#64748B', marginBottom: 6 }}>残差分布</div>
                 <ResponsiveContainer width="100%" height={100}>
                   <LineChart data={fitResult.residuals.map((p) => ({ x: p.x, y: Number(p.y.toFixed(5)) }))} margin={{ top: 5, right: 20, left: 10, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" />
-                    <XAxis dataKey="x" tick={{ fill: '#94A3B8', fontSize: 10 }} stroke="#334155" />
-                    <YAxis tick={{ fill: '#94A3B8', fontSize: 10 }} stroke="#334155" width={50} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
+                    <XAxis dataKey="x" tick={{ fill: '#64748B', fontSize: 10 }} stroke="#E2E8F0" />
+                    <YAxis tick={{ fill: '#64748B', fontSize: 10 }} stroke="#E2E8F0" width={50} />
                     <Line dataKey="y" stroke="#EF4444" dot={false} strokeWidth={1} isAnimationActive={false} />
                   </LineChart>
                 </ResponsiveContainer>
@@ -609,9 +609,9 @@ export default function SteadyStatePanel({ datasets }: SteadyStatePanelProps) {
               <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, fontFamily: 'Roboto Mono, monospace' }}>
                   <thead>
-                    <tr style={{ borderBottom: '1px solid #334155' }}>
+                    <tr style={{ borderBottom: '1px solid #E2E8F0' }}>
                       {['峰', '峰形', '位置', '幅度', 'FWHM', '面积', '占比'].map((h) => (
-                        <th key={h} style={{ textAlign: 'left', padding: '8px 10px', color: '#64748B', fontWeight: 500, fontSize: 11 }}>{h}</th>
+                        <th key={h} style={{ textAlign: 'left', padding: '8px 10px', color: '#94A3B8', fontWeight: 500, fontSize: 11 }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
@@ -622,13 +622,13 @@ export default function SteadyStatePanel({ datasets }: SteadyStatePanelProps) {
                         : pseudoVoigtArea(p.amplitude, p.fwhm, p.mu);
                       const frac = fitResult.totalArea > 0 ? (area / fitResult.totalArea * 100).toFixed(1) : '—';
                       return (
-                        <tr key={p.id} style={{ borderBottom: '1px solid #0F172A' }}>
+                        <tr key={p.id} style={{ borderBottom: '1px solid #F1F5F9' }}>
                           <td style={{ padding: '9px 10px', color: COLORS[(i + 1) % COLORS.length], fontWeight: 600 }}>{i + 1}</td>
                           <td style={{ padding: '9px 10px', color: '#94A3B8', fontSize: 11 }}>{SHAPE_LABELS[p.shape]}</td>
-                          <td style={{ padding: '9px 10px', color: '#F8FAFC' }}>{p.center.toFixed(2)}</td>
-                          <td style={{ padding: '9px 10px', color: '#F8FAFC' }}>{p.amplitude.toExponential(3)}</td>
-                          <td style={{ padding: '9px 10px', color: '#F8FAFC' }}>{p.fwhm.toFixed(2)}</td>
-                          <td style={{ padding: '9px 10px', color: '#F8FAFC' }}>{area.toExponential(3)}</td>
+                          <td style={{ padding: '9px 10px', color: '#0F172A' }}>{p.center.toFixed(2)}</td>
+                          <td style={{ padding: '9px 10px', color: '#0F172A' }}>{p.amplitude.toExponential(3)}</td>
+                          <td style={{ padding: '9px 10px', color: '#0F172A' }}>{p.fwhm.toFixed(2)}</td>
+                          <td style={{ padding: '9px 10px', color: '#0F172A' }}>{area.toExponential(3)}</td>
                           <td style={{ padding: '9px 10px', color: '#22C55E' }}>{frac}%</td>
                         </tr>
                       );
@@ -648,21 +648,21 @@ export default function SteadyStatePanel({ datasets }: SteadyStatePanelProps) {
               <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, fontFamily: 'Roboto Mono, monospace' }}>
                   <thead>
-                    <tr style={{ borderBottom: '1px solid #334155' }}>
+                    <tr style={{ borderBottom: '1px solid #E2E8F0' }}>
                       {['数据集', '峰值波长', '峰值强度', 'FWHM', '质心', '积分强度'].map((h) => (
-                        <th key={h} style={{ textAlign: 'left', padding: '8px 12px', color: '#64748B', fontWeight: 500 }}>{h}</th>
+                        <th key={h} style={{ textAlign: 'left', padding: '8px 12px', color: '#94A3B8', fontWeight: 500 }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {analyses.map(({ id, name, analysis }, i) => (
-                      <tr key={id} style={{ borderBottom: '1px solid #0F172A' }}>
+                      <tr key={id} style={{ borderBottom: '1px solid #F1F5F9' }}>
                         <td style={{ padding: '10px 12px', color: COLORS[i % COLORS.length], maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</td>
-                        <td style={{ padding: '10px 12px', color: '#F8FAFC' }}>{analysis.peakWavelength.toFixed(2)}</td>
-                        <td style={{ padding: '10px 12px', color: '#F8FAFC' }}>{analysis.peakIntensity.toExponential(3)}</td>
-                        <td style={{ padding: '10px 12px', color: '#F8FAFC' }}>{analysis.fwhm.toFixed(2)}</td>
-                        <td style={{ padding: '10px 12px', color: '#F8FAFC' }}>{analysis.centroid.toFixed(2)}</td>
-                        <td style={{ padding: '10px 12px', color: '#F8FAFC' }}>{analysis.integratedIntensity.toExponential(3)}</td>
+                        <td style={{ padding: '10px 12px', color: '#0F172A' }}>{analysis.peakWavelength.toFixed(2)}</td>
+                        <td style={{ padding: '10px 12px', color: '#0F172A' }}>{analysis.peakIntensity.toExponential(3)}</td>
+                        <td style={{ padding: '10px 12px', color: '#0F172A' }}>{analysis.fwhm.toFixed(2)}</td>
+                        <td style={{ padding: '10px 12px', color: '#0F172A' }}>{analysis.centroid.toFixed(2)}</td>
+                        <td style={{ padding: '10px 12px', color: '#0F172A' }}>{analysis.integratedIntensity.toExponential(3)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -676,17 +676,17 @@ export default function SteadyStatePanel({ datasets }: SteadyStatePanelProps) {
   );
 }
 
-function cardStyle() { return { background: '#1E293B', borderRadius: 12, padding: 16, border: '1px solid #334155' }; }
-function sectionTitle() { return { fontSize: 13, fontWeight: 600, marginBottom: 12, color: '#94A3B8', display: 'flex', alignItems: 'center', gap: 6 }; }
+function cardStyle() { return { background: '#FFFFFF', borderRadius: 12, padding: 16, border: '1px solid #E2E8F0' }; }
+function sectionTitle() { return { fontSize: 13, fontWeight: 600, marginBottom: 12, color: '#64748B', display: 'flex', alignItems: 'center', gap: 6 }; }
 function btnStyle(color: string) {
   return { display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 8, background: `${color}15`, border: `1px solid ${color}40`, color, fontSize: 13, cursor: 'pointer', fontWeight: 500, transition: 'all 0.15s' };
 }
 function miniBtn() {
-  return { width: 28, height: 28, borderRadius: 6, background: '#0F172A', border: '1px solid #334155', color: '#94A3B8', cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 };
+  return { width: 28, height: 28, borderRadius: 6, background: '#F1F5F9', border: '1px solid #E2E8F0', color: '#64748B', cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 };
 }
 function selectStyle() {
-  return { width: '100%', padding: '6px 8px', borderRadius: 6, background: '#0F172A', border: '1px solid #334155', color: '#CBD5E1', fontSize: 12, outline: 'none' };
+  return { width: '100%', padding: '6px 8px', borderRadius: 6, background: '#FFFFFF', border: '1px solid #E2E8F0', color: '#334155', fontSize: 12, outline: 'none' };
 }
 function numInputStyle() {
-  return { flex: 1, padding: '3px 6px', borderRadius: 4, background: '#0F172A', border: '1px solid #334155', color: '#F8FAFC', fontSize: 11, fontFamily: 'Roboto Mono', outline: 'none', minWidth: 0 };
+  return { flex: 1, padding: '3px 6px', borderRadius: 4, background: '#F8FAFC', border: '1px solid #E2E8F0', color: '#0F172A', fontSize: 11, fontFamily: 'Roboto Mono', outline: 'none', minWidth: 0 };
 }

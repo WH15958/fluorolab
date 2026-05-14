@@ -13,7 +13,7 @@ export default function App() {
   const [irfDatasets, setIRFDatasets] = useState<IRFDataset[]>([]);
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0F172A', color: '#F8FAFC' }}>
+    <div style={{ minHeight: '100vh', background: '#F8FAFC', color: '#0F172A' }}>
       <Navbar activeTab={activeTab} onTabChange={setActiveTab} />
 
       <main style={{ minHeight: 'calc(100vh - 57px)' }}>
@@ -40,8 +40,8 @@ export default function App() {
 
       {/* Footer */}
       <footer style={{
-        textAlign: 'center', padding: '16px', fontSize: 12, color: '#334155',
-        borderTop: '1px solid #1E293B',
+        textAlign: 'center', padding: '16px', fontSize: 12, color: '#94A3B8',
+        borderTop: '1px solid #E2E8F0',
         fontFamily: 'Roboto Mono, monospace',
       }}>
         FluoroLab — Fluorescence Data Analysis Platform

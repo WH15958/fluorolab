@@ -45,12 +45,12 @@ function UploadZone({ label, sublabel, color, onFiles, loading }: UploadZoneProp
     <label
       style={{
         display: 'block',
-        border: `2px dashed ${isDragging ? color : '#334155'}`,
+        border: `2px dashed ${isDragging ? color : '#CBD5E1'}`,
         borderRadius: 12,
         padding: '28px 24px',
         textAlign: 'center',
         cursor: 'pointer',
-        background: isDragging ? `${color}0a` : 'rgba(30, 41, 59, 0.4)',
+        background: isDragging ? `${color}0a` : '#FFFFFF',
         transition: 'all 0.2s ease',
         position: 'relative',
       }}
@@ -63,8 +63,8 @@ function UploadZone({ label, sublabel, color, onFiles, loading }: UploadZoneProp
       }}
       onMouseLeave={(e) => {
         if (!isDragging) {
-          (e.currentTarget as HTMLLabelElement).style.borderColor = '#334155';
-          (e.currentTarget as HTMLLabelElement).style.background = 'rgba(30, 41, 59, 0.4)';
+          (e.currentTarget as HTMLLabelElement).style.borderColor = '#CBD5E1';
+          (e.currentTarget as HTMLLabelElement).style.background = '#FFFFFF';
         }
       }}
     >
@@ -81,8 +81,8 @@ function UploadZone({ label, sublabel, color, onFiles, loading }: UploadZoneProp
         <Upload size={28} color={color} style={{ margin: '0 auto 12px', display: 'block' }} />
       )}
       <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 4 }}>{label}</div>
-      <div style={{ fontSize: 12, color: '#64748B' }}>{sublabel}</div>
-      <div style={{ fontSize: 11, color: '#475569', marginTop: 8 }}>支持 .txt / .csv 格式，可拖拽上传</div>
+      <div style={{ fontSize: 12, color: '#94A3B8' }}>{sublabel}</div>
+      <div style={{ fontSize: 11, color: '#94A3B8', marginTop: 8 }}>支持 .txt / .csv 格式，可拖拽上传</div>
     </label>
   );
 }
@@ -149,7 +149,7 @@ export default function UploadPanel({
   return (
     <div style={{ maxWidth: 900, margin: '0 auto', padding: '32px 24px' }}>
       <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 8 }}>数据上传</h2>
-      <p style={{ color: '#64748B', fontSize: 14, marginBottom: 32 }}>
+      <p style={{ color: '#94A3B8', fontSize: 14, marginBottom: 32 }}>
         上传荧光数据文件（.txt 或 .csv），每列分别为 X（波长/时间）和 Y（强度）。
         支持逗号、制表符、空格分隔，自动识别文件头。
       </p>
@@ -175,13 +175,13 @@ export default function UploadPanel({
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 20 }}>
         {/* Steady State */}
         <div>
-          <div style={{ marginBottom: 12, fontWeight: 600, fontSize: 14, color: '#38BDF8' }}>
+          <div style={{ marginBottom: 12, fontWeight: 600, fontSize: 14, color: '#2563EB' }}>
             稳态荧光数据
           </div>
           <UploadZone
             label="上传稳态数据"
             sublabel="发射/激发光谱"
-            color="#38BDF8"
+            color="#2563EB"
             onFiles={(files) => handleFiles(files, 'steady-state')}
             loading={loadingType === 'steady-state'}
           />
@@ -234,12 +234,12 @@ export default function UploadPanel({
       {/* Format Guide */}
       <div style={{
         marginTop: 40,
-        background: 'rgba(30, 41, 59, 0.5)',
+        background: '#FFFFFF',
         borderRadius: 12,
         padding: '20px 24px',
-        border: '1px solid #1E293B',
+        border: '1px solid #E2E8F0',
       }}>
-        <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 12, color: '#94A3B8' }}>文件格式说明</h3>
+        <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 12, color: '#64748B' }}>文件格式说明</h3>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
           {[
             { title: 'CSV 格式', code: '波长(nm),强度\n300,1250.3\n301,2341.7\n302,3892.1' },
@@ -251,12 +251,13 @@ export default function UploadPanel({
               <pre style={{
                 fontFamily: 'Roboto Mono, monospace',
                 fontSize: 11,
-                background: 'rgba(15, 23, 42, 0.8)',
+                background: '#F8FAFC',
                 borderRadius: 6,
                 padding: '8px 12px',
-                color: '#CBD5E1',
+                color: '#334155',
                 margin: 0,
                 overflow: 'auto',
+                border: '1px solid #E2E8F0',
               }}>{code}</pre>
             </div>
           ))}
