@@ -137,7 +137,7 @@ export default function TransientPanel({ datasets, irfDatasets }: TransientPanel
   const selectedIRF = irfDatasets.find((d) => d.id === fitConfig.irfId);
 
   // Update params when model changes
-  const handleModelChange = useCallback((modelType: FitModelType) => {
+  const handleModelChange = (modelType: FitModelType) => {
     const def = getDefaultParams(modelType);
     setFitConfig((prev) => ({
       ...prev,
@@ -147,7 +147,7 @@ export default function TransientPanel({ datasets, irfDatasets }: TransientPanel
       paramMaxs: def.bounds.max,
     }));
     setFitResult(null);
-  }, []);
+  };
 
   const customParamNames = fitConfig.customParams.split(',').map((s) => s.trim()).filter(Boolean);
   const paramNames = getParamNames(fitConfig.modelType, customParamNames);
