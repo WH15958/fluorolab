@@ -1,4 +1,4 @@
-﻿import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+﻿import React, { useState, useRef } from 'react';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   Legend, ResponsiveContainer, ReferenceLine, ReferenceArea, BarChart, Bar,
@@ -165,16 +165,14 @@ export default function TransientPanel({ datasets, irfDatasets }: TransientPanel
     }));
   };
 
-  const runFit = useCallback(async () => {
+  const runFit = async () => {
     if (!selectedDataset) return;
     setFitting(true);
     setFitError(null);
 
     try {
-      // Use requestAnimationFrame to allow UI update
       await new Promise((r) => setTimeout(r, 50));
 
-      // Filter data to fitting range if specified
       let fitData = selectedDataset.rawData;
       if (fitConfig.fitRangeStart !== null || fitConfig.fitRangeEnd !== null) {
         fitData = fitData.filter((p) => {
@@ -190,8 +188,6 @@ export default function TransientPanel({ datasets, irfDatasets }: TransientPanel
 
       const useIRF = fitConfig.useIRF && !!selectedIRF;
 
-      // Use the fitting engine with smart initial parameters
-      // The engine handles internal normalization, initial estimation, and LM optimization
       const result = fitTransientDecay(fitData, {
         modelType: fitConfig.modelType,
         initialParams: fitConfig.paramInitials,
@@ -206,42 +202,48 @@ export default function TransientPanel({ datasets, irfDatasets }: TransientPanel
       });
 
       setFitResult(result);
-    } catch (e: any) {
-      setFitError(e.message || '拟合失败');
+    } catch (e: unknown) {
+      setFitError(e instanceof Error ? e.message : '拟合失败');
     } finally {
       setFitting(false);
     }
-  }, [selectedDataset, fitConfig, selectedIRF, customParamNames]);
+  };
 
   // Chart data: merge raw + fitted + IRF with optional normalization
   // Use fullFittedCurve (on full time axis) if available, otherwise fittedCurve
 
-  // Compute x-axis shift for log scale (handle negative values)
-  const xShift = useMemo(() => {
-    if (!fitConfig.xLogScale || !selectedDataset) return 0;
-    const minX = Math.min(...selectedDataset.rawData.map((p) => p.x));
-    return minX < 0 ? (-minX + 1) : 0; // shift so all x >= 1 for log scale
-  }, [fitConfig.xLogScale, selectedDataset]);
-  const chartData = useMemo(() => {
+  const xShift = !fitConfig.xLogScale || !selectedDataset ? 0
+    : Math.min(...selectedDataset.rawData.map((p) => p.x)) < 0
+      ? -Math.min(...selectedDataset.rawData.map((p) => p.x)) + 1 : 0;
+
+  function computeChartData(): Record<string, number | null>[] {
     if (!selectedDataset) return [];
     const raw = selectedDataset.rawData;
     const maxY = fitConfig.normalize ? Math.max(...raw.map((p) => p.y)) : 1;
 
-    // Use fullFittedCurve for display if available, otherwise fall back to fittedCurve
-    const displayCurve = fitResult?.fullFittedCurve ?? fitResult?.fittedCurve;
+    const fullCurve = fitResult?.fullFittedCurve;
+    const partialCurve = fitResult?.fittedCurve;
 
-    // Fit range boundaries for display layer enforcement
     const fitStart = fitResult?.fitRange?.start ?? fitConfig.fitRangeStart;
     const fitEnd = fitResult?.fitRange?.end ?? fitConfig.fitRangeEnd;
 
-    return raw.map((p, i) => {
+    const partialMap = !fullCurve && partialCurve
+      ? new Map(partialCurve.map((pt) => [pt.x, pt.y]))
+      : null;
+
+    return raw.map((p) => {
       const yNorm = maxY > 0 ? p.y / maxY : p.y;
       const xDisplay = fitConfig.xLogScale ? p.x + xShift : p.x;
       const row: Record<string, number | null> = { x: xDisplay, raw: yNorm };
-      if (fitResult && displayCurve) {
-        const fyRaw = displayCurve[i]?.y;
-        const fy = fitConfig.normalize && maxY > 0 ? fyRaw / maxY : fyRaw;
-        // Enforce fit range at display level: only show fitted values within fit range
+      if (fitResult) {
+        let fyRaw: number | undefined;
+        if (fullCurve) {
+          const matched = fullCurve.find((pt) => Math.abs(pt.x - p.x) < 1e-9);
+          fyRaw = matched?.y;
+        } else if (partialMap) {
+          fyRaw = partialMap.get(p.x);
+        }
+        const fy = fitConfig.normalize && maxY > 0 && fyRaw != null ? fyRaw / maxY : fyRaw;
         const inRange = (fitStart == null || p.x >= fitStart) && (fitEnd == null || p.x <= fitEnd);
         row.fitted = (fy != null && !isNaN(fy) && inRange) ? fy : null;
       }
@@ -251,17 +253,12 @@ export default function TransientPanel({ datasets, irfDatasets }: TransientPanel
       }
       return row;
     });
-  }, [selectedDataset, fitResult, fitConfig.useIRF, selectedIRF, fitConfig.normalize, fitConfig.xLogScale, xShift, fitConfig.fitRangeStart, fitConfig.fitRangeEnd]);
+  }
+  const chartData = computeChartData();
 
   const avgLifetime = fitResult ? calculateAverageLifetime(fitResult.parameters, fitResult.modelType) : null;
 
-  // Auto-disable log scale when data has zeros/negatives or when normalization is on (useEffect avoids infinite loop)
   const hasInvalidData = selectedDataset?.rawData.some((p) => p.y <= 0) ?? false;
-  useEffect(() => {
-    if ((hasInvalidData || fitConfig.normalize) && fitConfig.logScale) {
-      setFitConfig((p) => ({ ...p, logScale: false }));
-    }
-  }, [hasInvalidData, fitConfig.normalize]);
 
   if (datasets.length === 0) {
     return (
@@ -399,8 +396,8 @@ export default function TransientPanel({ datasets, irfDatasets }: TransientPanel
                   }))}
                   placeholder="如 100"
                   style={{
-                    width: '100%', background: '#0F172A', border: '1px solid #334155',
-                    borderRadius: 6, color: '#F8FAFC', padding: '6px 8px', fontSize: 12,
+                    width: '100%', background: '#F8FAFC', border: '1px solid #E2E8F0',
+                    borderRadius: 6, color: '#0F172A', padding: '6px 8px', fontSize: 12,
                     fontFamily: 'Roboto Mono',
                   }}
                 />
@@ -595,7 +592,7 @@ export default function TransientPanel({ datasets, irfDatasets }: TransientPanel
                 checked={fitConfig.logScale}
                 onChange={(e) => setFitConfig((p) => ({ ...p, logScale: e.target.checked }))}
                 style={{ accentColor: '#7C3AED', width: 14, height: 14 }}
-                disabled={fitConfig.normalize}
+                disabled={fitConfig.normalize || hasInvalidData}
               />
               对数 Y 轴
             </label>

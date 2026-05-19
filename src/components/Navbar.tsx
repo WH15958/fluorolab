@@ -23,6 +23,7 @@ export default function Navbar({ activeTab, onTabChange }: NavbarProps) {
         zIndex: 100,
       }}
     >
+      <style>{`.nav-tab:hover:not(.nav-tab-active) { color: #334155 !important; }`}</style>
       <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 24px', display: 'flex', alignItems: 'center', gap: 0 }}>
         {/* Logo */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 0', marginRight: 40 }}>
@@ -49,6 +50,7 @@ export default function Navbar({ activeTab, onTabChange }: NavbarProps) {
               <button
                 key={id}
                 onClick={() => onTabChange(id)}
+                  className={`nav-tab${isActive ? ' nav-tab-active' : ''}`}
                   style={{
                     display: 'flex', alignItems: 'center', gap: 8,
                     padding: '12px 18px',
@@ -62,16 +64,6 @@ export default function Navbar({ activeTab, onTabChange }: NavbarProps) {
                     fontWeight: isActive ? 600 : 400,
                     transition: 'all 0.2s ease',
                     whiteSpace: 'nowrap',
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!isActive) {
-                      (e.currentTarget as HTMLButtonElement).style.color = '#334155';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!isActive) {
-                      (e.currentTarget as HTMLButtonElement).style.color = '#64748B';
-                    }
                   }}
               >
                 <Icon size={16} />

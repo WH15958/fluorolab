@@ -20,7 +20,7 @@ export function parseFileContent(
 
   // Detect delimiter
   const firstLine = lines[0];
-  let delimiter = ',';
+  let delimiter: string;
   if (firstLine.includes('\t')) delimiter = '\t';
   else if (firstLine.includes(';')) delimiter = ';';
   else if (firstLine.includes(',')) delimiter = ',';

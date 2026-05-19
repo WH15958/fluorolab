@@ -396,7 +396,7 @@ export function fitPeaks(
     return { peaks, baseline };
   };
 
-  let params = toVec(initialPeaks, baseline0);
+  const params = toVec(initialPeaks, baseline0);
 
   const residualFn = (par: number[]): number[] => {
     const { peaks, baseline } = fromVec(par);
@@ -457,56 +457,55 @@ export function exportChartPNG(
   chartRef: HTMLDivElement | null,
   filename = 'chart.png',
   scale = 2
-): void {
-  if (!chartRef) return;
+): Promise<void> {
+  return new Promise((resolve) => {
+    if (!chartRef) { resolve(); return; }
 
-  // Use html-to-image if available, otherwise canvas fallback
-  const el = chartRef;
-  const rect = el.getBoundingClientRect();
+    const el = chartRef;
+    const rect = el.getBoundingClientRect();
 
-  const canvas = document.createElement('canvas');
-  canvas.width = rect.width * scale;
-  canvas.height = rect.height * scale;
+    const canvas = document.createElement('canvas');
+    canvas.width = rect.width * scale;
+    canvas.height = rect.height * scale;
 
-  const ctx = canvas.getContext('2d')!;
-  ctx.scale(scale, scale);
+    const ctx = canvas.getContext('2d')!;
+    ctx.scale(scale, scale);
 
-  // Draw background
-  ctx.fillStyle = '#0F172A';
-  ctx.fillRect(0, 0, rect.width, rect.height);
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(0, 0, rect.width, rect.height);
 
-  // Get all SVG and canvas children
-  const svgElements = el.querySelectorAll('svg');
-  let svgData = '';
-  svgElements.forEach((svg) => {
-    const clone = svg.cloneNode(true) as SVGElement;
-    clone.setAttribute('width', String(rect.width));
-    clone.setAttribute('height', String(rect.height));
-    svgData += new XMLSerializer().serializeToString(clone);
+    const svgElements = el.querySelectorAll('svg');
+    let svgData = '';
+    svgElements.forEach((svg) => {
+      const clone = svg.cloneNode(true) as SVGElement;
+      clone.setAttribute('width', String(rect.width));
+      clone.setAttribute('height', String(rect.height));
+      svgData += new XMLSerializer().serializeToString(clone);
+    });
+
+    const img = new Image();
+    const blob = new Blob([svgData], { type: 'image/svg+xml' });
+    const url = URL.createObjectURL(blob);
+
+    img.onload = () => {
+      ctx.drawImage(img, 0, 0, rect.width, rect.height);
+      URL.revokeObjectURL(url);
+      canvas.toBlob((b) => {
+        if (b) downloadBlob(b, filename);
+        resolve();
+      }, 'image/png');
+    };
+
+    img.onerror = () => {
+      if (svgData) {
+        const svgBlob = new Blob([svgData], { type: 'image/svg+xml' });
+        downloadBlob(svgBlob, filename.replace('.png', '.svg'));
+      }
+      resolve();
+    };
+
+    img.src = url;
   });
-
-  // Simple SVG-to-canvas via img
-  const img = new Image();
-  const blob = new Blob([svgData], { type: 'image/svg+xml' });
-  const url = URL.createObjectURL(blob);
-
-  img.onload = () => {
-    ctx.drawImage(img, 0, 0, rect.width, rect.height);
-    URL.revokeObjectURL(url);
-    canvas.toBlob((blob) => {
-      if (blob) downloadBlob(blob, filename);
-    }, 'image/png');
-  };
-
-  img.onerror = () => {
-    // Fallback: just download as SVG if available
-    if (svgData) {
-      const svgBlob = new Blob([svgData], { type: 'image/svg+xml' });
-      downloadBlob(svgBlob, filename.replace('.png', '.svg'));
-    }
-  };
-
-  img.src = url;
 }
 
 function downloadFile(content: string, filename: string, mimeType: string): void {
@@ -530,7 +529,6 @@ export function exportMultiDatasetCSV(
   datasets: { name: string; data: DataPoint[] }[],
   filename = 'spectra.csv'
 ): void {
-  const maxLen = Math.max(...datasets.map((d) => d.data.length));
   const allX = new Set<number>();
   datasets.forEach((d) => d.data.forEach((p) => allX.add(p.x)));
   const xs = Array.from(allX).sort((a, b) => a - b);

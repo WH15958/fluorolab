@@ -57,7 +57,7 @@ function stretchedExp(t: number, params: number[]): number {
 // ===== Custom Expression Evaluator =====
 
 function buildCustomEvaluator(expression: string, paramNames: string[]) {
-  let expr = expression.replace(/\^/g, '**');
+  const expr = expression.replace(/\^/g, '**');
   return function(t: number, params: number[]): number {
     try {
       const argList = ['t', ...paramNames].join(',');
@@ -71,14 +71,13 @@ function buildCustomEvaluator(expression: string, paramNames: string[]) {
 
 // ===== IRF Convolution =====
 
-let cachedIRF: { irfData: DataPoint[]; timeAxis: number[]; interp: number[] } | null = null;
+let cachedIRFKey = '';
+let cachedIRFInterp: number[] | null = null;
 
 function interpolateIRF(irfData: DataPoint[], timeAxis: number[]): number[] {
-  if (cachedIRF && 
-      cachedIRF.irfData === irfData && 
-      cachedIRF.timeAxis === timeAxis &&
-      cachedIRF.interp.length === timeAxis.length) {
-    return cachedIRF.interp;
+  const key = `${irfData[0]?.x ?? ''}_${irfData.length}_${timeAxis[0]}_${timeAxis.length}`;
+  if (cachedIRFKey === key && cachedIRFInterp && cachedIRFInterp.length === timeAxis.length) {
+    return cachedIRFInterp;
   }
   
   const result = timeAxis.map((t) => {
@@ -95,7 +94,8 @@ function interpolateIRF(irfData: DataPoint[], timeAxis: number[]): number[] {
     return irfData[lo].y + frac * (irfData[hi].y - irfData[lo].y);
   });
   
-  cachedIRF = { irfData, timeAxis, interp: result };
+  cachedIRFKey = key;
+  cachedIRFInterp = result;
   return result;
 }
 
@@ -133,7 +133,8 @@ function convolveWithIRF(
 }
 
 export function clearIRFCache(): void {
-  cachedIRF = null;
+  cachedIRFKey = '';
+  cachedIRFInterp = null;
 }
 
 // ===== Statistics =====
@@ -311,10 +312,6 @@ function estimateInitialParams(
   }
   
   const dataMax = Math.max(...data.map(p => p.y));
-  const dataMin = Math.min(...data.map(p => p.y));
-  const dataRange = dataMax - dataMin;
-  const firstY = data[0].y;
-  const lastY = data[data.length - 1].y;
   const firstX = data[0].x;
   
   // Baseline estimate: average of last 10% of data
@@ -468,8 +465,6 @@ export function fitTransientDecay(
   const t0 = (!useIRF && timeOffset != null) ? timeOffset : 
              (!useIRF ? (fitRange?.start ?? timeAxis[0] ?? 0) : 0);
   
-  const shiftedTimeAxis = timeAxis.map(t => t - t0);
-  
   // ===== Internal normalization for numerical stability =====
   const yMax = Math.max(...data.map(p => Math.abs(p.y)));
   const normFactor = yMax > 0 ? yMax : 1;
@@ -513,7 +508,7 @@ export function fitTransientDecay(
   
   // Check result quality; if R² < 0.5, try with different initial guesses
   let fittedNormValues = computeNormModelValues(timeAxis, fittedParams);
-  let rSq = computeRSquared(normData, fittedNormValues);
+  const rSq = computeRSquared(normData, fittedNormValues);
   
   if (rSq < 0.5) {
     const altInitials = [...workInitials];
@@ -532,7 +527,6 @@ export function fitTransientDecay(
     if (altRSq > rSq) {
       fittedParams = altParams;
       fittedNormValues = altNormValues;
-      rSq = altRSq;
     }
   }
   

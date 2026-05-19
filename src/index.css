@@ -35,6 +35,10 @@ code, pre, .mono {
 }
 
 /* Custom scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #CBD5E1 #F1F5F9;
+}
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;

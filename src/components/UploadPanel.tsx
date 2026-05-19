@@ -137,8 +137,8 @@ export default function UploadPanel({
           if (type === 'steady-state') onSteadyAdd(ds);
           else onTransientAdd(ds);
         }
-      } catch (e: any) {
-        errs.push(`${file.name}: ${e.message}`);
+      } catch (e: unknown) {
+          errs.push(`${file.name}: ${e instanceof Error ? e.message : String(e)}`);
       }
     }
 

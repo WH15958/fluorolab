@@ -10,7 +10,7 @@ import {
 import type { FluorescenceDataset, PeakParams, PeakShape, PeakFitResult } from '../types/fluorescence';
 import {
   analyzeSteadyState, normalizeData, subtractBaseline, smoothData,
-  detectPeaks, fitPeaks, exportToCSV, exportMultiDatasetCSV,
+  detectPeaks, fitPeaks, exportMultiDatasetCSV,
   exportChartPNG,
 } from '../utils/steadyStateAnalysis';
 
@@ -140,7 +140,7 @@ export default function SteadyStatePanel({ datasets }: SteadyStatePanelProps) {
       if (fitPt) row[key] = fitPt.y;
 
       fitResult.peaks.forEach((peak, pi) => {
-        let val = 0;
+        let val: number;
         if (peak.shape === 'gaussian') {
           const sigma = peak.fwhm / 2.355;
           val = peak.amplitude * Math.exp(-((x - peak.center) ** 2) / (2 * sigma * sigma));
@@ -537,10 +537,10 @@ export default function SteadyStatePanel({ datasets }: SteadyStatePanelProps) {
                   return <span style={{ fontSize: 12, color: '#334155' }}>{ds?.name || value}</span>;
                 }} />
 
-                {fitResult ? (
+                {fitResult && fitTarget ? (
                   <>
-                    <Line dataKey={fitTarget!.id + '_raw'} name="原始数据" stroke="#64748B" dot={false} strokeWidth={1.5} opacity={0.5} isAnimationActive={false} />
-                    <Line dataKey={fitTarget!.id + '_fit'} name="拟合曲线" stroke="#38BDF8" dot={false} strokeWidth={2.5} isAnimationActive={false} />
+                    <Line dataKey={fitTarget.id + '_raw'} name="原始数据" stroke="#64748B" dot={false} strokeWidth={1.5} opacity={0.5} isAnimationActive={false} />
+                    <Line dataKey={fitTarget.id + '_fit'} name="拟合曲线" stroke="#38BDF8" dot={false} strokeWidth={2.5} isAnimationActive={false} />
                     {fitResult.peaks.map((_, i) => (
                       <Line
                         key={i} dataKey={`peak_${i}`} name={`峰 ${i + 1}`}
