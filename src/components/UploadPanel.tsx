@@ -1,7 +1,8 @@
 import React, { useCallback, useState } from 'react';
-import { Upload, X, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { Upload, X, CheckCircle, AlertCircle, Loader2, Columns } from 'lucide-react';
 import type { FluorescenceDataset, IRFDataset } from '../types/fluorescence';
-import { readDatasetFromFile, readIRFFromFile } from '../utils/fileParser';
+import { readDatasetFromFile, readIRFFromFile, detectColumns } from '../utils/fileParser';
+import type { FileColumnInfo } from '../utils/fileParser';
 
 interface UploadPanelProps {
   steadyStateDatasets: FluorescenceDataset[];
@@ -121,28 +122,65 @@ export default function UploadPanel({
 }: UploadPanelProps) {
   const [errors, setErrors] = useState<string[]>([]);
   const [loadingType, setLoadingType] = useState<string | null>(null);
+  const [columnPicker, setColumnPicker] = useState<{
+    file: File; content: string; type: 'transient' | 'irf'; columnInfo: FileColumnInfo
+  } | null>(null);
 
   const handleFiles = async (files: File[], type: 'steady-state' | 'transient' | 'irf') => {
-    setErrors([]);
-    setLoadingType(type);
-    const errs: string[] = [];
-
-    for (const file of files) {
-      try {
-        if (type === 'irf') {
-          const ds = await readIRFFromFile(file);
-          onIRFAdd(ds);
-        } else {
+    if (type === 'steady-state') {
+      setErrors([]);
+      setLoadingType(type);
+      const errs: string[] = [];
+      for (const file of files) {
+        try {
           const ds = await readDatasetFromFile(file, type);
-          if (type === 'steady-state') onSteadyAdd(ds);
-          else onTransientAdd(ds);
-        }
-      } catch (e: unknown) {
+          onSteadyAdd(ds);
+        } catch (e: unknown) {
           errs.push(`${file.name}: ${e instanceof Error ? e.message : String(e)}`);
+        }
       }
+      setErrors(errs);
+      setLoadingType(null);
+      return;
     }
 
+    setErrors([]);
+    const errs: string[] = [];
+    for (const file of files) {
+      try {
+        const content = await file.text();
+        const info = detectColumns(content);
+        if (info.count >= 3) {
+          setColumnPicker({ file, content, type: type as 'transient' | 'irf', columnInfo: info });
+          return;
+        }
+        if (type === 'irf') {
+          onIRFAdd(await readIRFFromFile(file));
+        } else {
+          onTransientAdd(await readDatasetFromFile(file, type));
+        }
+      } catch (e: unknown) {
+        errs.push(`${file.name}: ${e instanceof Error ? e.message : String(e)}`);
+      }
+    }
     setErrors(errs);
+  };
+
+  const handleColumnConfirm = async (colIndex: number) => {
+    const picker = columnPicker;
+    if (!picker) return;
+    setColumnPicker(null);
+    setLoadingType(picker.type);
+
+    try {
+      if (picker.type === 'irf') {
+        onIRFAdd(await readIRFFromFile(picker.file, colIndex));
+      } else {
+        onTransientAdd(await readDatasetFromFile(picker.file, picker.type, colIndex));
+      }
+    } catch (e: unknown) {
+      setErrors([`${picker.file.name}: ${e instanceof Error ? e.message : String(e)}`]);
+    }
     setLoadingType(null);
   };
 
@@ -230,6 +268,66 @@ export default function UploadPanel({
           </div>
         </div>
       </div>
+
+      {/* Column picker modal */}
+      {columnPicker && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 1000,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: 'rgba(0,0,0,0.4)',
+        }} onClick={() => setColumnPicker(null)}>
+          <div style={{
+            background: '#FFFFFF', borderRadius: 16, padding: 28,
+            maxWidth: 480, width: '90%', boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
+          }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+              <Columns size={20} color="#A78BFA" />
+              <span style={{ fontSize: 17, fontWeight: 700 }}>选择数据列</span>
+            </div>
+            <p style={{ fontSize: 13, color: '#64748B', marginBottom: 16 }}>
+              文件 <strong>{columnPicker.file.name}</strong> 包含 {columnPicker.columnInfo.count} 列数据，
+              请选择要使用的数据列：
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {columnPicker.columnInfo.headers.slice(1).map((header, i) => {
+                const colIndex = i + 1;
+                return (
+                  <button
+                    key={colIndex}
+                    onClick={() => handleColumnConfirm(colIndex)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 12,
+                      padding: '12px 16px', borderRadius: 10,
+                      border: `1px solid #E2E8F0`,
+                      background: '#F8FAFC',
+                      cursor: 'pointer', fontSize: 14, textAlign: 'left',
+                      transition: 'all 0.15s',
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#A78BFA'; e.currentTarget.style.background = 'rgba(167, 139, 250, 0.08)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#E2E8F0'; e.currentTarget.style.background = '#F8FAFC'; }}
+                  >
+                    <span style={{
+                      width: 28, height: 28, borderRadius: 8,
+                      background: 'rgba(167, 139, 250, 0.15)',
+                      color: '#7C3AED', fontWeight: 700, fontSize: 13,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>{colIndex}</span>
+                    <span>{header}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <button
+              onClick={() => setColumnPicker(null)}
+              style={{
+                marginTop: 14, background: 'none', border: 'none',
+                color: '#94A3B8', fontSize: 13, cursor: 'pointer',
+                padding: '6px 0',
+              }}
+            >取消</button>
+          </div>
+        </div>
+      )}
 
       {/* Format Guide */}
       <div style={{
